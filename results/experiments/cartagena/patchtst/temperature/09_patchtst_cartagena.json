@@ -1,0 +1,1817 @@
+[
+    {
+        "input_variables": [
+            "DB_TEMP_INT_INPUT_Cartagena_comp0",
+            "DB_TEMP_EXT_Cartagena_meteo",
+            "REL_HUM_EXT_Cartagena_meteo",
+            "RADIATION_MEAN_Cartagena_meteo",
+            "REL_HUM_INT_Cartagena_comp0",
+            "month_sin",
+            "month_cos",
+            "is_day",
+            "WB_TEMP_Cartagena_comp0",
+            "VPD_Cartagena_comp0",
+            "WATER_DEF_Cartagena_comp0"
+        ],
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (patch_embedding): PatchEmbedding(\n    (proj): Linear(in_features=24, out_features=64, bias=True)\n  )\n  (pos_encoding): PositionalEncoding()\n  (encoder): TransformerEncoder(\n    (layers): ModuleList(\n      (0-2): 3 x TransformerEncoderLayer(\n        (self_attn): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)\n        )\n        (linear1): Linear(in_features=64, out_features=128, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (linear2): Linear(in_features=128, out_features=64, bias=True)\n        (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout1): Dropout(p=0.1, inplace=False)\n        (dropout2): Dropout(p=0.1, inplace=False)\n      )\n    )\n  )\n  (dropout): Dropout(p=0.1, inplace=False)\n  (head): Linear(in_features=1472, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars) -> (batch, n_vars, window_size)\n        x = x.permute(0, 2, 1)\n        batch = x.size(0)\n\n        x = self.patch_embedding(x)  # (batch, n_vars, num_patches, d_model)\n\n        # channel independence: merge batch and n_vars to pass through the\n        # same encoder (weights shared across channels)\n        x = x.reshape(batch * self.n_vars, self.num_patches, -1)\n        x = self.pos_encoding(x)\n        x = self.encoder(x)\n        x = self.dropout(x)\n\n        # shared head applied channel by channel, WITHOUT merging channels\n        # back together (channel independence end to end)\n        x = x.reshape(batch * self.n_vars, -1)          # (batch*n_vars, num_patches*d_model)\n        out = self.head(x)                               # (batch*n_vars, horizon)\n        out = out.reshape(batch, self.n_vars, self.horizon)  # (batch, n_vars, horizon)\n        return out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 6.25e-06\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "PatchTST",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 288,
+            "horizon": 24,
+            "patch_len": 24,
+            "patch_stride": 12,
+            "d_model": 64,
+            "nhead": 4,
+            "num_encoder_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.1,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 341.8541247844696,
+        "metrics": {
+            "global": {
+                "r2": 0.928348721266707,
+                "mse": 3.291915114572019,
+                "rmse": 1.8143635563392522,
+                "mae": 1.2209813471691056,
+                "mape": 6.519050717309101,
+                "relative_error": 0.024077449271982736,
+                "relative_error_abs": 0.06519050717309101
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9888949378861709,
+                    "mse": 0.4622444643421916,
+                    "rmse": 0.6798856259270316,
+                    "mae": 0.47573766103071796,
+                    "mape": 2.4641224769630354,
+                    "relative_error": 0.014257300678968406,
+                    "relative_error_abs": 0.024641224769630356
+                },
+                "h_2": {
+                    "r2": 0.9813871008979508,
+                    "mse": 0.783454515402688,
+                    "rmse": 0.8851296602208559,
+                    "mae": 0.6037917198762481,
+                    "mape": 3.0570040700608763,
+                    "relative_error": 0.01380438929478579,
+                    "relative_error_abs": 0.03057004070060876
+                },
+                "h_3": {
+                    "r2": 0.9740933514879745,
+                    "mse": 1.0968142134731005,
+                    "rmse": 1.0472889827898986,
+                    "mae": 0.6993971523913615,
+                    "mape": 3.5895152993273602,
+                    "relative_error": 0.016832823238726716,
+                    "relative_error_abs": 0.0358951529932736
+                },
+                "h_4": {
+                    "r2": 0.9654057855126588,
+                    "mse": 1.4864991529470275,
+                    "rmse": 1.2192207154354897,
+                    "mae": 0.8166628633837176,
+                    "mape": 4.267086071379523,
+                    "relative_error": 0.019927113523045673,
+                    "relative_error_abs": 0.04267086071379523
+                },
+                "h_5": {
+                    "r2": 0.9567067668485002,
+                    "mse": 1.90695702472992,
+                    "rmse": 1.3809261474568146,
+                    "mae": 0.9048090425164481,
+                    "mape": 4.774985048405794,
+                    "relative_error": 0.02169605386428975,
+                    "relative_error_abs": 0.04774985048405794
+                },
+                "h_6": {
+                    "r2": 0.9490943448030453,
+                    "mse": 2.287605318804144,
+                    "rmse": 1.512483163147327,
+                    "mae": 0.9959491353149184,
+                    "mape": 5.354452273937768,
+                    "relative_error": 0.025739439586278404,
+                    "relative_error_abs": 0.053544522739377674
+                },
+                "h_7": {
+                    "r2": 0.9467072454301723,
+                    "mse": 2.4314407959848587,
+                    "rmse": 1.5593077938575368,
+                    "mae": 1.051119617522994,
+                    "mape": 5.58686357268311,
+                    "relative_error": 0.027658024632947566,
+                    "relative_error_abs": 0.0558686357268311
+                },
+                "h_8": {
+                    "r2": 0.9397545048261579,
+                    "mse": 2.8008117263682117,
+                    "rmse": 1.6735625851363347,
+                    "mae": 1.1384193136915788,
+                    "mape": 6.036843187576564,
+                    "relative_error": 0.030121454221958437,
+                    "relative_error_abs": 0.06036843187576564
+                },
+                "h_9": {
+                    "r2": 0.9355526683469838,
+                    "mse": 3.043301886895078,
+                    "rmse": 1.7445062014493036,
+                    "mae": 1.2062116488783714,
+                    "mape": 6.416809067332843,
+                    "relative_error": 0.03239435829925976,
+                    "relative_error_abs": 0.06416809067332843
+                },
+                "h_10": {
+                    "r2": 0.9351777070722298,
+                    "mse": 3.1154460425024664,
+                    "rmse": 1.7650626171619144,
+                    "mae": 1.2165341785226302,
+                    "mape": 6.546328360931726,
+                    "relative_error": 0.03097679255930438,
+                    "relative_error_abs": 0.06546328360931726
+                },
+                "h_11": {
+                    "r2": 0.930806103297521,
+                    "mse": 3.371086596726704,
+                    "rmse": 1.8360519046929757,
+                    "mae": 1.2482810668067497,
+                    "mape": 6.761077764907824,
+                    "relative_error": 0.028307002585329782,
+                    "relative_error_abs": 0.06761077764907825
+                },
+                "h_12": {
+                    "r2": 0.9240931918868989,
+                    "mse": 3.7314909003862056,
+                    "rmse": 1.931706732500098,
+                    "mae": 1.3141915826212562,
+                    "mape": 7.182089885423661,
+                    "relative_error": 0.031653062612430734,
+                    "relative_error_abs": 0.0718208988542366
+                },
+                "h_13": {
+                    "r2": 0.9213311907753164,
+                    "mse": 3.908195448370963,
+                    "rmse": 1.9769156401756154,
+                    "mae": 1.3514556087838907,
+                    "mape": 7.384008644866394,
+                    "relative_error": 0.031914894514369616,
+                    "relative_error_abs": 0.07384008644866394
+                },
+                "h_14": {
+                    "r2": 0.9162887165369813,
+                    "mse": 4.233619920852472,
+                    "rmse": 2.0575762247976312,
+                    "mae": 1.4054645555432954,
+                    "mape": 7.6648221224063136,
+                    "relative_error": 0.03235051801839174,
+                    "relative_error_abs": 0.07664822122406313
+                },
+                "h_15": {
+                    "r2": 0.9152517421492115,
+                    "mse": 4.2852944530442345,
+                    "rmse": 2.0700952763204485,
+                    "mae": 1.4124984659954662,
+                    "mape": 7.689221013806061,
+                    "relative_error": 0.030855241198238657,
+                    "relative_error_abs": 0.07689221013806061
+                },
+                "h_16": {
+                    "r2": 0.91405995315091,
+                    "mse": 4.263090457408612,
+                    "rmse": 2.0647252740760966,
+                    "mae": 1.4286596247837315,
+                    "mape": 7.789514529417022,
+                    "relative_error": 0.030236924674455334,
+                    "relative_error_abs": 0.07789514529417021
+                },
+                "h_17": {
+                    "r2": 0.9115106359424744,
+                    "mse": 4.291255086627954,
+                    "rmse": 2.071534476331001,
+                    "mae": 1.4355913220533758,
+                    "mape": 7.727183581986835,
+                    "relative_error": 0.02408815852933809,
+                    "relative_error_abs": 0.07727183581986835
+                },
+                "h_18": {
+                    "r2": 0.9072699567609723,
+                    "mse": 4.412909883724679,
+                    "rmse": 2.1006927152072192,
+                    "mae": 1.4553863958674862,
+                    "mape": 7.741542774039517,
+                    "relative_error": 0.02068479155399747,
+                    "relative_error_abs": 0.07741542774039517
+                },
+                "h_19": {
+                    "r2": 0.9048887490619385,
+                    "mse": 4.41145821170248,
+                    "rmse": 2.100347164566487,
+                    "mae": 1.4815117007106762,
+                    "mape": 7.868879062540189,
+                    "relative_error": 0.021516864796709678,
+                    "relative_error_abs": 0.07868879062540189
+                },
+                "h_20": {
+                    "r2": 0.8995263925279734,
+                    "mse": 4.524165475416001,
+                    "rmse": 2.127008574363536,
+                    "mae": 1.5072378642836026,
+                    "mape": 7.95084474877997,
+                    "relative_error": 0.020312206249549363,
+                    "relative_error_abs": 0.0795084474877997
+                },
+                "h_21": {
+                    "r2": 0.8970933595691749,
+                    "mse": 4.515861949269873,
+                    "rmse": 2.1250557520380196,
+                    "mae": 1.5253239409470418,
+                    "mape": 8.028358530520231,
+                    "relative_error": 0.019404123146571223,
+                    "relative_error_abs": 0.08028358530520231
+                },
+                "h_22": {
+                    "r2": 0.8967190742991524,
+                    "mse": 4.438644536673803,
+                    "rmse": 2.1068090888055813,
+                    "mae": 1.5175310249950469,
+                    "mape": 7.999241715761467,
+                    "relative_error": 0.014808216612230255,
+                    "relative_error_abs": 0.07999241715761467
+                },
+                "h_23": {
+                    "r2": 0.8921339490330602,
+                    "mse": 4.526866412607406,
+                    "rmse": 2.127643394135259,
+                    "mae": 1.5435599577750614,
+                    "mape": 8.192122862592207,
+                    "relative_error": 0.016453157111297616,
+                    "relative_error_abs": 0.08192122862592206
+                },
+                "h_24": {
+                    "r2": 0.8874088813430326,
+                    "mse": 4.677448275467387,
+                    "rmse": 2.1627409173239838,
+                    "mae": 1.568226887762868,
+                    "mape": 8.384300549772107,
+                    "relative_error": 0.021865871025111196,
+                    "relative_error_abs": 0.08384300549772107
+                }
+            },
+            "per_month": {
+                "2025-08": {
+                    "r2": 0.9423857645855198,
+                    "mse": 1.0784571240492664,
+                    "rmse": 1.038487902697603,
+                    "mae": 0.7431725131041755,
+                    "mape": 2.9062502364992757,
+                    "relative_error": 0.009292038204505283,
+                    "relative_error_abs": 0.029062502364992755
+                },
+                "2025-09": {
+                    "r2": 0.928743981495451,
+                    "mse": 2.0526158022686425,
+                    "rmse": 1.4326952928898185,
+                    "mae": 1.0716081958346892,
+                    "mape": 4.244035498680121,
+                    "relative_error": 0.007795387064195218,
+                    "relative_error_abs": 0.04244035498680122
+                },
+                "2025-10": {
+                    "r2": 0.8051970619421694,
+                    "mse": 7.061297884362875,
+                    "rmse": 2.6573102725054287,
+                    "mae": 1.6770241223536542,
+                    "mape": 6.926398194605775,
+                    "relative_error": 0.015103200768472233,
+                    "relative_error_abs": 0.06926398194605775
+                },
+                "2025-11": {
+                    "r2": 0.8940240897417139,
+                    "mse": 3.4617253986484386,
+                    "rmse": 1.860571255998662,
+                    "mae": 1.3367022703385647,
+                    "mape": 8.519857344247356,
+                    "relative_error": 0.038057175034803666,
+                    "relative_error_abs": 0.08519857344247356
+                },
+                "2025-12": {
+                    "r2": 0.8623643953242255,
+                    "mse": 3.4974646756681116,
+                    "rmse": 1.8701509767043172,
+                    "mae": 1.289418271750105,
+                    "mape": 7.7476110627553805,
+                    "relative_error": 0.029356562799543996,
+                    "relative_error_abs": 0.0774761106275538
+                },
+                "2026-01": {
+                    "r2": 0.8833483903319236,
+                    "mse": 2.81341243350861,
+                    "rmse": 1.677322996178318,
+                    "mae": 1.1611012263750946,
+                    "mape": 7.366725651692491,
+                    "relative_error": 0.03405327886092486,
+                    "relative_error_abs": 0.0736672565169249
+                },
+                "2026-02": {
+                    "r2": 0.8865773512283529,
+                    "mse": 2.983316412003314,
+                    "rmse": 1.727227956004451,
+                    "mae": 1.2522776193270897,
+                    "mape": 7.830088643285436,
+                    "relative_error": 0.03718418647746384,
+                    "relative_error_abs": 0.07830088643285436
+                },
+                "2026-03": {
+                    "r2": 0.34173227158870645,
+                    "mse": 2.31448228458335,
+                    "rmse": 1.5213422641152616,
+                    "mae": 1.2222211647825123,
+                    "mape": 8.34798502575882,
+                    "relative_error": 0.01344389875747737,
+                    "relative_error_abs": 0.08347985025758821
+                }
+            },
+            "day": {
+                "r2": 0.9183191787559849,
+                "mse": 4.527771764582043,
+                "rmse": 2.127856142830629,
+                "mae": 1.4307492943213438,
+                "mape": 6.79947243818401,
+                "relative_error": 0.024190664472279407,
+                "relative_error_abs": 0.0679947243818401
+            },
+            "night": {
+                "r2": 0.9190072103754687,
+                "mse": 2.2649356448453792,
+                "rmse": 1.5049703136093346,
+                "mae": 1.0466671375637246,
+                "mape": 6.286024216863753,
+                "relative_error": 0.023983369035116484,
+                "relative_error_abs": 0.06286024216863753
+            }
+        },
+        "predictions": "./results/predictions/cartagena/patchtst/temperature\\exp_patchtst_DB_TEMP_INT_4251b394c7fe42d3aedfeb1aa9871ff3.parquet",
+        "notes": "Channel-independent PatchTST faithful to the original paper (multivariate -> multivariate, encoder and head shared across channels, no mixing of information between channels). Trained and evaluated on all input variables; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), with the same schema as the base GRU/LSTM model, to keep the analysis pipeline compatible."
+    },
+    {
+        "input_variables": [
+            "DB_TEMP_INT_INPUT_Cartagena_comp0",
+            "DB_TEMP_EXT_Cartagena_meteo",
+            "REL_HUM_EXT_Cartagena_meteo",
+            "RADIATION_MEAN_Cartagena_meteo",
+            "REL_HUM_INT_Cartagena_comp0",
+            "month_sin",
+            "month_cos",
+            "is_day",
+            "WB_TEMP_Cartagena_comp0",
+            "VPD_Cartagena_comp0",
+            "WATER_DEF_Cartagena_comp0"
+        ],
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (patch_embedding): PatchEmbedding(\n    (proj): Linear(in_features=24, out_features=64, bias=True)\n  )\n  (pos_encoding): PositionalEncoding()\n  (encoder): TransformerEncoder(\n    (layers): ModuleList(\n      (0-2): 3 x TransformerEncoderLayer(\n        (self_attn): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)\n        )\n        (linear1): Linear(in_features=64, out_features=128, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (linear2): Linear(in_features=128, out_features=64, bias=True)\n        (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout1): Dropout(p=0.1, inplace=False)\n        (dropout2): Dropout(p=0.1, inplace=False)\n      )\n    )\n  )\n  (dropout): Dropout(p=0.1, inplace=False)\n  (head): Linear(in_features=1472, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars) -> (batch, n_vars, window_size)\n        x = x.permute(0, 2, 1)\n        batch = x.size(0)\n\n        x = self.patch_embedding(x)  # (batch, n_vars, num_patches, d_model)\n\n        # channel independence: merge batch and n_vars to pass through the\n        # same encoder (weights shared across channels)\n        x = x.reshape(batch * self.n_vars, self.num_patches, -1)\n        x = self.pos_encoding(x)\n        x = self.encoder(x)\n        x = self.dropout(x)\n\n        # shared head applied channel by channel, WITHOUT merging channels\n        # back together (channel independence end to end)\n        x = x.reshape(batch * self.n_vars, -1)          # (batch*n_vars, num_patches*d_model)\n        out = self.head(x)                               # (batch*n_vars, horizon)\n        out = out.reshape(batch, self.n_vars, self.horizon)  # (batch, n_vars, horizon)\n        return out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 2.5e-05\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "PatchTST",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 288,
+            "horizon": 24,
+            "patch_len": 24,
+            "patch_stride": 12,
+            "d_model": 64,
+            "nhead": 4,
+            "num_encoder_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.1,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 474.06834959983826,
+        "metrics": {
+            "global": {
+                "r2": 0.9220843264644683,
+                "mse": 3.579723738475253,
+                "rmse": 1.8920157870576166,
+                "mae": 1.261896493132794,
+                "mape": 6.698563302848271,
+                "relative_error": 0.02626697330521761,
+                "relative_error_abs": 0.0669856330284827
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9862460311385983,
+                    "mse": 0.5725043141362117,
+                    "rmse": 0.7566401483771606,
+                    "mae": 0.5163276777287088,
+                    "mape": 2.599527589445224,
+                    "relative_error": 0.01959616084887763,
+                    "relative_error_abs": 0.02599527589445224
+                },
+                "h_2": {
+                    "r2": 0.9778585620700371,
+                    "mse": 0.9319778412073387,
+                    "rmse": 0.9653899943584141,
+                    "mae": 0.6353112392113653,
+                    "mape": 3.1757276522396896,
+                    "relative_error": 0.01854962665099673,
+                    "relative_error_abs": 0.0317572765223969
+                },
+                "h_3": {
+                    "r2": 0.9691422231493052,
+                    "mse": 1.3064309816189743,
+                    "rmse": 1.1429921179163811,
+                    "mae": 0.7481040877160747,
+                    "mape": 3.7927918886902265,
+                    "relative_error": 0.021114332166860532,
+                    "relative_error_abs": 0.037927918886902265
+                },
+                "h_4": {
+                    "r2": 0.9601873798764544,
+                    "mse": 1.710731894545781,
+                    "rmse": 1.3079494999982917,
+                    "mae": 0.8577846816585567,
+                    "mape": 4.410086930900452,
+                    "relative_error": 0.0245078555170101,
+                    "relative_error_abs": 0.04410086930900452
+                },
+                "h_5": {
+                    "r2": 0.9502938303129562,
+                    "mse": 2.1894306005150312,
+                    "rmse": 1.4796724639307954,
+                    "mae": 0.9676159717976232,
+                    "mape": 5.1097891986438295,
+                    "relative_error": 0.03078562625837806,
+                    "relative_error_abs": 0.05109789198643829
+                },
+                "h_6": {
+                    "r2": 0.9439400729864229,
+                    "mse": 2.519228692998003,
+                    "rmse": 1.58720782917613,
+                    "mae": 1.027082891251142,
+                    "mape": 5.463959100922874,
+                    "relative_error": 0.027786755528561777,
+                    "relative_error_abs": 0.05463959100922874
+                },
+                "h_7": {
+                    "r2": 0.9404881629846166,
+                    "mse": 2.7151816326853586,
+                    "rmse": 1.6477808205842666,
+                    "mae": 1.0821375037784977,
+                    "mape": 5.698077815315785,
+                    "relative_error": 0.02954325282259758,
+                    "relative_error_abs": 0.05698077815315785
+                },
+                "h_8": {
+                    "r2": 0.9326918528754513,
+                    "mse": 3.1291542579669085,
+                    "rmse": 1.7689415643166138,
+                    "mae": 1.1780209315211843,
+                    "mape": 6.1826090347789835,
+                    "relative_error": 0.0313538548972125,
+                    "relative_error_abs": 0.06182609034778984
+                },
+                "h_9": {
+                    "r2": 0.9303084054418099,
+                    "mse": 3.2909440279323077,
+                    "rmse": 1.8140959257801963,
+                    "mae": 1.2199566465201697,
+                    "mape": 6.414354876036285,
+                    "relative_error": 0.030283023222572016,
+                    "relative_error_abs": 0.06414354876036285
+                },
+                "h_10": {
+                    "r2": 0.9286858708055934,
+                    "mse": 3.427452370757504,
+                    "rmse": 1.8513379947371857,
+                    "mae": 1.2525616936058424,
+                    "mape": 6.646801110057337,
+                    "relative_error": 0.030958503465823423,
+                    "relative_error_abs": 0.06646801110057338
+                },
+                "h_11": {
+                    "r2": 0.9236695774339435,
+                    "mse": 3.7187740060562233,
+                    "rmse": 1.9284123018836568,
+                    "mae": 1.2976683047216935,
+                    "mape": 6.988382685183693,
+                    "relative_error": 0.03203134881720329,
+                    "relative_error_abs": 0.06988382685183693
+                },
+                "h_12": {
+                    "r2": 0.9165653903518453,
+                    "mse": 4.101548917924126,
+                    "rmse": 2.0252281150339897,
+                    "mae": 1.3738761214676511,
+                    "mape": 7.485934031583513,
+                    "relative_error": 0.03653062716245625,
+                    "relative_error_abs": 0.07485934031583513
+                },
+                "h_13": {
+                    "r2": 0.9138964162202913,
+                    "mse": 4.2775483388237205,
+                    "rmse": 2.068223474101317,
+                    "mae": 1.403126881642646,
+                    "mape": 7.6869545674446,
+                    "relative_error": 0.03656049335637762,
+                    "relative_error_abs": 0.076869545674446
+                },
+                "h_14": {
+                    "r2": 0.9102870862614677,
+                    "mse": 4.537146762645916,
+                    "rmse": 2.1300579247161133,
+                    "mae": 1.4471735737071023,
+                    "mape": 7.878162260082422,
+                    "relative_error": 0.033730417429358645,
+                    "relative_error_abs": 0.07878162260082422
+                },
+                "h_15": {
+                    "r2": 0.9095130808870318,
+                    "mse": 4.5754697781584825,
+                    "rmse": 2.1390347772204366,
+                    "mae": 1.4558634043184735,
+                    "mape": 7.899132226782012,
+                    "relative_error": 0.03160095943667101,
+                    "relative_error_abs": 0.07899132226782012
+                },
+                "h_16": {
+                    "r2": 0.9080679507838797,
+                    "mse": 4.560326135631045,
+                    "rmse": 2.1354920125420853,
+                    "mae": 1.471146880169881,
+                    "mape": 7.999619093845658,
+                    "relative_error": 0.03301308854245824,
+                    "relative_error_abs": 0.07999619093845659
+                },
+                "h_17": {
+                    "r2": 0.904637302195651,
+                    "mse": 4.624574561994202,
+                    "rmse": 2.1504824021586884,
+                    "mae": 1.4924308106076585,
+                    "mape": 8.026393410565888,
+                    "relative_error": 0.029046143415317815,
+                    "relative_error_abs": 0.08026393410565888
+                },
+                "h_18": {
+                    "r2": 0.9005331876904357,
+                    "mse": 4.733504523577383,
+                    "rmse": 2.1756618587403196,
+                    "mae": 1.4983589282220522,
+                    "mape": 7.930537521345546,
+                    "relative_error": 0.022241439817256015,
+                    "relative_error_abs": 0.07930537521345546
+                },
+                "h_19": {
+                    "r2": 0.8976080055811162,
+                    "mse": 4.749154281294598,
+                    "rmse": 2.1792554419559442,
+                    "mae": 1.5165258406938527,
+                    "mape": 7.9763729682686,
+                    "relative_error": 0.01985134269597203,
+                    "relative_error_abs": 0.079763729682686
+                },
+                "h_20": {
+                    "r2": 0.8925597244728715,
+                    "mse": 4.837863369684912,
+                    "rmse": 2.1995143485971878,
+                    "mae": 1.5474970359766842,
+                    "mape": 8.134712706269651,
+                    "relative_error": 0.02235216533961367,
+                    "relative_error_abs": 0.08134712706269652
+                },
+                "h_21": {
+                    "r2": 0.8909593105543034,
+                    "mse": 4.785043009163037,
+                    "rmse": 2.187474116226987,
+                    "mae": 1.549014726913723,
+                    "mape": 8.13360989795135,
+                    "relative_error": 0.018619723061963717,
+                    "relative_error_abs": 0.08133609897951351
+                },
+                "h_22": {
+                    "r2": 0.8862572012975409,
+                    "mse": 4.888258394478299,
+                    "rmse": 2.2109406130600386,
+                    "mae": 1.5779633502792034,
+                    "mape": 8.325733740526998,
+                    "relative_error": 0.019288284438512365,
+                    "relative_error_abs": 0.08325733740526997
+                },
+                "h_23": {
+                    "r2": 0.8848626635625166,
+                    "mse": 4.832023945288125,
+                    "rmse": 2.198186512852839,
+                    "mae": 1.5788292311605554,
+                    "mape": 8.363124131958648,
+                    "relative_error": 0.016081888564166473,
+                    "relative_error_abs": 0.08363124131958648
+                },
+                "h_24": {
+                    "r2": 0.8820735604868125,
+                    "mse": 4.899097084322594,
+                    "rmse": 2.2133904048591595,
+                    "mae": 1.5911374205167168,
+                    "mape": 8.443124829519217,
+                    "relative_error": 0.014980445869005142,
+                    "relative_error_abs": 0.08443124829519216
+                }
+            },
+            "per_month": {
+                "2025-08": {
+                    "r2": 0.9409925074616323,
+                    "mse": 1.104536929848636,
+                    "rmse": 1.0509695189912198,
+                    "mae": 0.7440954165381929,
+                    "mape": 2.8816032364218347,
+                    "relative_error": 0.004882561099197533,
+                    "relative_error_abs": 0.028816032364218345
+                },
+                "2025-09": {
+                    "r2": 0.9280865237380976,
+                    "mse": 2.071554668211336,
+                    "rmse": 1.4392896401389597,
+                    "mae": 1.0768198111322187,
+                    "mape": 4.25854737523422,
+                    "relative_error": 0.0069233765363795295,
+                    "relative_error_abs": 0.042585473752342194
+                },
+                "2025-10": {
+                    "r2": 0.7503637910350115,
+                    "mse": 9.048917084102387,
+                    "rmse": 3.0081417992013586,
+                    "mae": 1.9705556730331668,
+                    "mape": 8.327097253326981,
+                    "relative_error": 0.03753800126831519,
+                    "relative_error_abs": 0.08327097253326982
+                },
+                "2025-11": {
+                    "r2": 0.8948900565674742,
+                    "mse": 3.4334384101449626,
+                    "rmse": 1.8529539687064442,
+                    "mae": 1.3353863521711327,
+                    "mape": 8.486866378541535,
+                    "relative_error": 0.03783919642595141,
+                    "relative_error_abs": 0.08486866378541535
+                },
+                "2025-12": {
+                    "r2": 0.8615487084593393,
+                    "mse": 3.5181921320778553,
+                    "rmse": 1.8756844436306057,
+                    "mae": 1.278107214392727,
+                    "mape": 7.682948045272098,
+                    "relative_error": 0.028560090089296688,
+                    "relative_error_abs": 0.07682948045272098
+                },
+                "2026-01": {
+                    "r2": 0.8856427210583636,
+                    "mse": 2.758077589774228,
+                    "rmse": 1.6607460943125014,
+                    "mae": 1.1575166122033178,
+                    "mape": 7.358907986437882,
+                    "relative_error": 0.03211146097041293,
+                    "relative_error_abs": 0.07358907986437882
+                },
+                "2026-02": {
+                    "r2": 0.8873084662198897,
+                    "mse": 2.9640861491154786,
+                    "rmse": 1.7216521568294447,
+                    "mae": 1.2473712253446836,
+                    "mape": 7.758246914972901,
+                    "relative_error": 0.03751307387767159,
+                    "relative_error_abs": 0.07758246914972901
+                },
+                "2026-03": {
+                    "r2": 0.3121590079672265,
+                    "mse": 2.4184624613336556,
+                    "rmse": 1.5551406564467587,
+                    "mae": 1.217784011809163,
+                    "mape": 8.309152094863283,
+                    "relative_error": 0.01632380262747269,
+                    "relative_error_abs": 0.08309152094863283
+                }
+            },
+            "day": {
+                "r2": 0.9144648646944968,
+                "mse": 4.741426011853899,
+                "rmse": 2.1774815755486654,
+                "mae": 1.4751432555356743,
+                "mape": 7.036843977346752,
+                "relative_error": 0.02729804125671966,
+                "relative_error_abs": 0.07036843977346752
+            },
+            "night": {
+                "r2": 0.9065118003063952,
+                "mse": 2.61436551130145,
+                "rmse": 1.61689996947908,
+                "mae": 1.0846914370515277,
+                "mape": 6.417456826856574,
+                "relative_error": 0.025410170359603225,
+                "relative_error_abs": 0.06417456826856574
+            }
+        },
+        "predictions": "./results/predictions/cartagena/patchtst/temperature\\exp_patchtst_DB_TEMP_INT_12339f894c1d4b7db584215a318fda25.parquet",
+        "notes": "Channel-independent PatchTST faithful to the original paper (multivariate -> multivariate, encoder and head shared across channels, no mixing of information between channels). Trained and evaluated on all input variables; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), with the same schema as the base GRU/LSTM model, to keep the analysis pipeline compatible."
+    },
+    {
+        "input_variables": [
+            "DB_TEMP_INT_INPUT_Cartagena_comp0",
+            "DB_TEMP_EXT_Cartagena_meteo",
+            "REL_HUM_EXT_Cartagena_meteo",
+            "RADIATION_MEAN_Cartagena_meteo",
+            "REL_HUM_INT_Cartagena_comp0",
+            "month_sin",
+            "month_cos",
+            "is_day",
+            "WB_TEMP_Cartagena_comp0",
+            "VPD_Cartagena_comp0",
+            "WATER_DEF_Cartagena_comp0"
+        ],
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (patch_embedding): PatchEmbedding(\n    (proj): Linear(in_features=24, out_features=64, bias=True)\n  )\n  (pos_encoding): PositionalEncoding()\n  (encoder): TransformerEncoder(\n    (layers): ModuleList(\n      (0-2): 3 x TransformerEncoderLayer(\n        (self_attn): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)\n        )\n        (linear1): Linear(in_features=64, out_features=128, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (linear2): Linear(in_features=128, out_features=64, bias=True)\n        (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout1): Dropout(p=0.1, inplace=False)\n        (dropout2): Dropout(p=0.1, inplace=False)\n      )\n    )\n  )\n  (dropout): Dropout(p=0.1, inplace=False)\n  (head): Linear(in_features=1472, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars) -> (batch, n_vars, window_size)\n        x = x.permute(0, 2, 1)\n        batch = x.size(0)\n\n        x = self.patch_embedding(x)  # (batch, n_vars, num_patches, d_model)\n\n        # channel independence: merge batch and n_vars to pass through the\n        # same encoder (weights shared across channels)\n        x = x.reshape(batch * self.n_vars, self.num_patches, -1)\n        x = self.pos_encoding(x)\n        x = self.encoder(x)\n        x = self.dropout(x)\n\n        # shared head applied channel by channel, WITHOUT merging channels\n        # back together (channel independence end to end)\n        x = x.reshape(batch * self.n_vars, -1)          # (batch*n_vars, num_patches*d_model)\n        out = self.head(x)                               # (batch*n_vars, horizon)\n        out = out.reshape(batch, self.n_vars, self.horizon)  # (batch, n_vars, horizon)\n        return out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 6.25e-06\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "PatchTST",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 288,
+            "horizon": 24,
+            "patch_len": 24,
+            "patch_stride": 12,
+            "d_model": 64,
+            "nhead": 4,
+            "num_encoder_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.1,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 431.1269838809967,
+        "metrics": {
+            "global": {
+                "r2": 0.9285954764734333,
+                "mse": 3.2805783009242764,
+                "rmse": 1.811236677224784,
+                "mae": 1.217999449840287,
+                "mape": 6.480126475441068,
+                "relative_error": 0.026031641826217398,
+                "relative_error_abs": 0.06480126475441068
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9897823342845631,
+                    "mse": 0.425306888610563,
+                    "rmse": 0.6521555708652369,
+                    "mae": 0.4341012356286805,
+                    "mape": 2.1312880366650173,
+                    "relative_error": 0.012448502362230947,
+                    "relative_error_abs": 0.02131288036665017
+                },
+                "h_2": {
+                    "r2": 0.980646551117561,
+                    "mse": 0.8146257513367491,
+                    "rmse": 0.9025662032985442,
+                    "mae": 0.6094975022756233,
+                    "mape": 3.0607934663831178,
+                    "relative_error": 0.01880172872879494,
+                    "relative_error_abs": 0.030607934663831177
+                },
+                "h_3": {
+                    "r2": 0.9732794805026768,
+                    "mse": 1.131271208718684,
+                    "rmse": 1.063612339491548,
+                    "mae": 0.7062292982402846,
+                    "mape": 3.582337243085424,
+                    "relative_error": 0.018809617847316617,
+                    "relative_error_abs": 0.03582337243085424
+                },
+                "h_4": {
+                    "r2": 0.9636897999404173,
+                    "mse": 1.560234346458641,
+                    "rmse": 1.2490934098211555,
+                    "mae": 0.8241711325187809,
+                    "mape": 4.23966779051377,
+                    "relative_error": 0.023182110067330314,
+                    "relative_error_abs": 0.0423966779051377
+                },
+                "h_5": {
+                    "r2": 0.9569333107213784,
+                    "mse": 1.8969783421888646,
+                    "rmse": 1.3773083685902967,
+                    "mae": 0.8966162572324268,
+                    "mape": 4.696868090255798,
+                    "relative_error": 0.023760478798687798,
+                    "relative_error_abs": 0.04696868090255798
+                },
+                "h_6": {
+                    "r2": 0.9485236268923665,
+                    "mse": 2.313252318591387,
+                    "rmse": 1.5209379732886503,
+                    "mae": 1.0014979148742755,
+                    "mape": 5.3373489270936565,
+                    "relative_error": 0.027735980560836003,
+                    "relative_error_abs": 0.05337348927093657
+                },
+                "h_7": {
+                    "r2": 0.946582398046,
+                    "mse": 2.437136861530707,
+                    "rmse": 1.5611331978824572,
+                    "mae": 1.0445576727736494,
+                    "mape": 5.498970938667128,
+                    "relative_error": 0.02857170336069825,
+                    "relative_error_abs": 0.054989709386671276
+                },
+                "h_8": {
+                    "r2": 0.9395053986952525,
+                    "mse": 2.8123926648356745,
+                    "rmse": 1.6770189816563421,
+                    "mae": 1.1370441949521086,
+                    "mape": 6.00086041278022,
+                    "relative_error": 0.03160749019298492,
+                    "relative_error_abs": 0.0600086041278022
+                },
+                "h_9": {
+                    "r2": 0.9373991379328009,
+                    "mse": 2.9561087598798865,
+                    "rmse": 1.7193338128123599,
+                    "mae": 1.1788277294129543,
+                    "mape": 6.237046513394832,
+                    "relative_error": 0.030832471788624655,
+                    "relative_error_abs": 0.06237046513394832
+                },
+                "h_10": {
+                    "r2": 0.9356264613492461,
+                    "mse": 3.0938783121239015,
+                    "rmse": 1.758942384537908,
+                    "mae": 1.2086134652325125,
+                    "mape": 6.450420934209418,
+                    "relative_error": 0.030145361168661514,
+                    "relative_error_abs": 0.06450420934209418
+                },
+                "h_11": {
+                    "r2": 0.9294165867447367,
+                    "mse": 3.4387830389022627,
+                    "rmse": 1.8543955993536716,
+                    "mae": 1.2568304527746499,
+                    "mape": 6.758757109363538,
+                    "relative_error": 0.030560263064936564,
+                    "relative_error_abs": 0.06758757109363538
+                },
+                "h_12": {
+                    "r2": 0.9242219552342016,
+                    "mse": 3.7251610431480033,
+                    "rmse": 1.9300676265737435,
+                    "mae": 1.3177744623372525,
+                    "mape": 7.161916481552277,
+                    "relative_error": 0.0339043890495621,
+                    "relative_error_abs": 0.07161916481552277
+                },
+                "h_13": {
+                    "r2": 0.9208400012374582,
+                    "mse": 3.9325973013424758,
+                    "rmse": 1.9830777345687878,
+                    "mae": 1.3658854039149577,
+                    "mape": 7.451272619190558,
+                    "relative_error": 0.035795400354043515,
+                    "relative_error_abs": 0.07451272619190558
+                },
+                "h_14": {
+                    "r2": 0.9173948154436707,
+                    "mse": 4.177680002455904,
+                    "rmse": 2.0439373773322664,
+                    "mae": 1.3954370821294722,
+                    "mape": 7.591524599655049,
+                    "relative_error": 0.033349651928911636,
+                    "relative_error_abs": 0.07591524599655049
+                },
+                "h_15": {
+                    "r2": 0.9156726164636656,
+                    "mse": 4.264012949318999,
+                    "rmse": 2.0649486553711207,
+                    "mae": 1.419737578131791,
+                    "mape": 7.728276491042911,
+                    "relative_error": 0.03200782747439779,
+                    "relative_error_abs": 0.07728276491042911
+                },
+                "h_16": {
+                    "r2": 0.915125647383163,
+                    "mse": 4.2102262680277205,
+                    "rmse": 2.0518835902720505,
+                    "mae": 1.4208377581708365,
+                    "mape": 7.709138967322371,
+                    "relative_error": 0.03101704399541935,
+                    "relative_error_abs": 0.07709138967322371
+                },
+                "h_17": {
+                    "r2": 0.9118369736199083,
+                    "mse": 4.275429476023085,
+                    "rmse": 2.067711168423454,
+                    "mae": 1.4440147647810908,
+                    "mape": 7.7748712928648,
+                    "relative_error": 0.027673671755290615,
+                    "relative_error_abs": 0.077748712928648
+                },
+                "h_18": {
+                    "r2": 0.9068403256439836,
+                    "mse": 4.433355505621219,
+                    "rmse": 2.105553491512676,
+                    "mae": 1.4683268494771902,
+                    "mape": 7.835995495646037,
+                    "relative_error": 0.026963502499589835,
+                    "relative_error_abs": 0.07835995495646036
+                },
+                "h_19": {
+                    "r2": 0.9055807078163259,
+                    "mse": 4.3793637213125916,
+                    "rmse": 2.0926929352660872,
+                    "mae": 1.4701042517735752,
+                    "mape": 7.7986288879002315,
+                    "relative_error": 0.024573622784135843,
+                    "relative_error_abs": 0.07798628887900232
+                },
+                "h_20": {
+                    "r2": 0.9010865142335489,
+                    "mse": 4.453915696042077,
+                    "rmse": 2.110430215866442,
+                    "mae": 1.4947320569148899,
+                    "mape": 7.899738852397902,
+                    "relative_error": 0.022935241432667765,
+                    "relative_error_abs": 0.07899738852397901
+                },
+                "h_21": {
+                    "r2": 0.8978665292969709,
+                    "mse": 4.481932868119583,
+                    "rmse": 2.1170575967884253,
+                    "mae": 1.5193921492239146,
+                    "mape": 8.041608402497932,
+                    "relative_error": 0.024925251571125528,
+                    "relative_error_abs": 0.08041608402497932
+                },
+                "h_22": {
+                    "r2": 0.8961737159665725,
+                    "mse": 4.462082085930931,
+                    "rmse": 2.112364098807526,
+                    "mae": 1.526129343377175,
+                    "mape": 8.086451967702093,
+                    "relative_error": 0.01927452810073139,
+                    "relative_error_abs": 0.08086451967702094
+                },
+                "h_23": {
+                    "r2": 0.8926135454108488,
+                    "mse": 4.506738960876694,
+                    "rmse": 2.1229081376443717,
+                    "mae": 1.5448324746464066,
+                    "mape": 8.212029042601891,
+                    "relative_error": 0.017884440135426227,
+                    "relative_error_abs": 0.08212029042601891
+                },
+                "h_24": {
+                    "r2": 0.8904426389470381,
+                    "mse": 4.55141485078604,
+                    "rmse": 2.133404521131902,
+                    "mae": 1.546795765372392,
+                    "mape": 8.237222847799664,
+                    "relative_error": 0.017999124806813413,
+                    "relative_error_abs": 0.08237222847799663
+                }
+            },
+            "per_month": {
+                "2025-08": {
+                    "r2": 0.9437492010990544,
+                    "mse": 1.0529355179629913,
+                    "rmse": 1.0261264629483986,
+                    "mae": 0.7295525070659986,
+                    "mape": 2.8422445651309762,
+                    "relative_error": 0.008208949226354801,
+                    "relative_error_abs": 0.02842244565130976
+                },
+                "2025-09": {
+                    "r2": 0.9291079266015383,
+                    "mse": 2.042131923270191,
+                    "rmse": 1.429031813246364,
+                    "mae": 1.0686434149742121,
+                    "mape": 4.235638290791524,
+                    "relative_error": 0.008693236548527172,
+                    "relative_error_abs": 0.04235638290791524
+                },
+                "2025-10": {
+                    "r2": 0.79886105915539,
+                    "mse": 7.290967947451561,
+                    "rmse": 2.700179243578389,
+                    "mae": 1.7305523900496185,
+                    "mape": 7.233966263966751,
+                    "relative_error": 0.025121305373041015,
+                    "relative_error_abs": 0.07233966263966751
+                },
+                "2025-11": {
+                    "r2": 0.8952892477902372,
+                    "mse": 3.420398744890962,
+                    "rmse": 1.849432006019946,
+                    "mae": 1.3256539682510458,
+                    "mape": 8.38441771545735,
+                    "relative_error": 0.03978288734771527,
+                    "relative_error_abs": 0.08384417715457348
+                },
+                "2025-12": {
+                    "r2": 0.8655456925792328,
+                    "mse": 3.4166245849198034,
+                    "rmse": 1.8484113678831895,
+                    "mae": 1.2823927808406104,
+                    "mape": 7.695689603195328,
+                    "relative_error": 0.02975443443736176,
+                    "relative_error_abs": 0.07695689603195328
+                },
+                "2026-01": {
+                    "r2": 0.8873601219645932,
+                    "mse": 2.716657183517908,
+                    "rmse": 1.6482284985759432,
+                    "mae": 1.1404264194350089,
+                    "mape": 7.220538910790125,
+                    "relative_error": 0.034053733662183915,
+                    "relative_error_abs": 0.07220538910790125
+                },
+                "2026-02": {
+                    "r2": 0.8895756832468883,
+                    "mse": 2.9044523295964515,
+                    "rmse": 1.704245384208639,
+                    "mae": 1.2296189853960195,
+                    "mape": 7.624308099628592,
+                    "relative_error": 0.03791455110881067,
+                    "relative_error_abs": 0.07624308099628592
+                },
+                "2026-03": {
+                    "r2": 0.30156246758795435,
+                    "mse": 2.4557201057952627,
+                    "rmse": 1.5670737397440053,
+                    "mae": 1.215838718018591,
+                    "mape": 8.329222882325503,
+                    "relative_error": 0.02317459232887201,
+                    "relative_error_abs": 0.08329222882325503
+                }
+            },
+            "day": {
+                "r2": 0.9193380864601143,
+                "mse": 4.471291167751487,
+                "rmse": 2.114542779834801,
+                "mae": 1.4337107352317033,
+                "mape": 6.8129106392361365,
+                "relative_error": 0.025855922240368593,
+                "relative_error_abs": 0.06812910639236136
+            },
+            "night": {
+                "r2": 0.918071134756337,
+                "mse": 2.2911126791946232,
+                "rmse": 1.5136421899493364,
+                "mae": 1.0387464098671384,
+                "mape": 6.203587522428265,
+                "relative_error": 0.026177662327134008,
+                "relative_error_abs": 0.062035875224282645
+            }
+        },
+        "predictions": "./results/predictions/cartagena/patchtst/temperature\\exp_patchtst_DB_TEMP_INT_d8bf8253b4be4c69a6a45a3aee6242be.parquet",
+        "notes": "Channel-independent PatchTST faithful to the original paper (multivariate -> multivariate, encoder and head shared across channels, no mixing of information between channels). Trained and evaluated on all input variables; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), with the same schema as the base GRU/LSTM model, to keep the analysis pipeline compatible."
+    },
+    {
+        "input_variables": [
+            "DB_TEMP_INT_INPUT_Cartagena_comp0",
+            "DB_TEMP_EXT_Cartagena_meteo",
+            "REL_HUM_EXT_Cartagena_meteo",
+            "RADIATION_MEAN_Cartagena_meteo",
+            "REL_HUM_INT_Cartagena_comp0",
+            "month_sin",
+            "month_cos",
+            "is_day",
+            "WB_TEMP_Cartagena_comp0",
+            "VPD_Cartagena_comp0",
+            "WATER_DEF_Cartagena_comp0"
+        ],
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (patch_embedding): PatchEmbedding(\n    (proj): Linear(in_features=24, out_features=64, bias=True)\n  )\n  (pos_encoding): PositionalEncoding()\n  (encoder): TransformerEncoder(\n    (layers): ModuleList(\n      (0-2): 3 x TransformerEncoderLayer(\n        (self_attn): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)\n        )\n        (linear1): Linear(in_features=64, out_features=128, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (linear2): Linear(in_features=128, out_features=64, bias=True)\n        (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout1): Dropout(p=0.1, inplace=False)\n        (dropout2): Dropout(p=0.1, inplace=False)\n      )\n    )\n  )\n  (dropout): Dropout(p=0.1, inplace=False)\n  (head): Linear(in_features=1472, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars) -> (batch, n_vars, window_size)\n        x = x.permute(0, 2, 1)\n        batch = x.size(0)\n\n        x = self.patch_embedding(x)  # (batch, n_vars, num_patches, d_model)\n\n        # channel independence: merge batch and n_vars to pass through the\n        # same encoder (weights shared across channels)\n        x = x.reshape(batch * self.n_vars, self.num_patches, -1)\n        x = self.pos_encoding(x)\n        x = self.encoder(x)\n        x = self.dropout(x)\n\n        # shared head applied channel by channel, WITHOUT merging channels\n        # back together (channel independence end to end)\n        x = x.reshape(batch * self.n_vars, -1)          # (batch*n_vars, num_patches*d_model)\n        out = self.head(x)                               # (batch*n_vars, horizon)\n        out = out.reshape(batch, self.n_vars, self.horizon)  # (batch, n_vars, horizon)\n        return out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 2.5e-05\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "PatchTST",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 288,
+            "horizon": 24,
+            "patch_len": 24,
+            "patch_stride": 12,
+            "d_model": 64,
+            "nhead": 4,
+            "num_encoder_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.1,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 474.1747794151306,
+        "metrics": {
+            "global": {
+                "r2": 0.9311684965756569,
+                "mse": 3.162364587026216,
+                "rmse": 1.7783038511531757,
+                "mae": 1.1818554796755398,
+                "mape": 6.145026798946316,
+                "relative_error": 0.005996799072966461,
+                "relative_error_abs": 0.06145026798946316
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9920172625189034,
+                    "mse": 0.33227875477964974,
+                    "rmse": 0.5764362538734441,
+                    "mae": 0.3810304551763596,
+                    "mape": 1.8730958836668772,
+                    "relative_error": -0.001964719221274783,
+                    "relative_error_abs": 0.01873095883666877
+                },
+                "h_2": {
+                    "r2": 0.984889948634527,
+                    "mse": 0.6360125795203566,
+                    "rmse": 0.7975039683414475,
+                    "mae": 0.5224862716360328,
+                    "mape": 2.5654553865709397,
+                    "relative_error": 0.0013505918737781659,
+                    "relative_error_abs": 0.025654553865709397
+                },
+                "h_3": {
+                    "r2": 0.9775569193944493,
+                    "mse": 0.9501765460269452,
+                    "rmse": 0.9747699964745249,
+                    "mae": 0.6433626910080088,
+                    "mape": 3.2151665700001333,
+                    "relative_error": 0.002405750930543074,
+                    "relative_error_abs": 0.03215166570000133
+                },
+                "h_4": {
+                    "r2": 0.9691375807658976,
+                    "mse": 1.3261454474179974,
+                    "rmse": 1.1515838864008117,
+                    "mae": 0.7593675225014672,
+                    "mape": 3.837522499087513,
+                    "relative_error": 0.003389376791288891,
+                    "relative_error_abs": 0.03837522499087513
+                },
+                "h_5": {
+                    "r2": 0.96126552913941,
+                    "mse": 1.706155117782872,
+                    "rmse": 1.3061987282886445,
+                    "mae": 0.8516115850021795,
+                    "mape": 4.388164251689009,
+                    "relative_error": 0.005143190298774876,
+                    "relative_error_abs": 0.043881642516890085
+                },
+                "h_6": {
+                    "r2": 0.9537766048016051,
+                    "mse": 2.0771932764625296,
+                    "rmse": 1.4412471253961028,
+                    "mae": 0.9370758422677979,
+                    "mape": 4.904630095178178,
+                    "relative_error": 0.008145386839750293,
+                    "relative_error_abs": 0.049046300951781786
+                },
+                "h_7": {
+                    "r2": 0.9512572915770828,
+                    "mse": 2.2238484522504707,
+                    "rmse": 1.4912573393785764,
+                    "mae": 0.9884126917366364,
+                    "mape": 5.094331167361432,
+                    "relative_error": 0.009389885207369813,
+                    "relative_error_abs": 0.05094331167361432
+                },
+                "h_8": {
+                    "r2": 0.9440908342346372,
+                    "mse": 2.599215868924954,
+                    "rmse": 1.6122083825997662,
+                    "mae": 1.0753897962305539,
+                    "mape": 5.514474684151219,
+                    "relative_error": 0.009636517481958852,
+                    "relative_error_abs": 0.055144746841512195
+                },
+                "h_9": {
+                    "r2": 0.9419464907291096,
+                    "mse": 2.7413757835032553,
+                    "rmse": 1.6557100541771361,
+                    "mae": 1.110293134319544,
+                    "mape": 5.706825573873998,
+                    "relative_error": 0.007501081586090729,
+                    "relative_error_abs": 0.057068255738739984
+                },
+                "h_10": {
+                    "r2": 0.9375840379365805,
+                    "mse": 2.9997945647516473,
+                    "rmse": 1.731991502505612,
+                    "mae": 1.1765001859584456,
+                    "mape": 6.138982998170384,
+                    "relative_error": 0.013290619338014086,
+                    "relative_error_abs": 0.061389829981703836
+                },
+                "h_11": {
+                    "r2": 0.9327011914713202,
+                    "mse": 3.278758997808849,
+                    "rmse": 1.810734380799362,
+                    "mae": 1.2173135941660294,
+                    "mape": 6.47355979496596,
+                    "relative_error": 0.015929999507084885,
+                    "relative_error_abs": 0.06473559794965959
+                },
+                "h_12": {
+                    "r2": 0.9261462712561394,
+                    "mse": 3.6305638929868587,
+                    "rmse": 1.90540386610998,
+                    "mae": 1.2790955512065698,
+                    "mape": 6.818643451567988,
+                    "relative_error": 0.016558244116412043,
+                    "relative_error_abs": 0.06818643451567988
+                },
+                "h_13": {
+                    "r2": 0.9225380006844313,
+                    "mse": 3.848242221160146,
+                    "rmse": 1.9616937123720783,
+                    "mae": 1.324783923986117,
+                    "mape": 7.076411343477762,
+                    "relative_error": 0.015602469353643589,
+                    "relative_error_abs": 0.07076411343477762
+                },
+                "h_14": {
+                    "r2": 0.9193060430155382,
+                    "mse": 4.081021454327019,
+                    "rmse": 2.020153819471928,
+                    "mae": 1.3640965783992247,
+                    "mape": 7.215887335234164,
+                    "relative_error": 0.012176735696139472,
+                    "relative_error_abs": 0.07215887335234164
+                },
+                "h_15": {
+                    "r2": 0.9174211664501346,
+                    "mse": 4.17559754411882,
+                    "rmse": 2.043427890609018,
+                    "mae": 1.3760316527828436,
+                    "mape": 7.232564609923113,
+                    "relative_error": 0.008886171726513816,
+                    "relative_error_abs": 0.07232564609923113
+                },
+                "h_16": {
+                    "r2": 0.9160962936757052,
+                    "mse": 4.162076969778882,
+                    "rmse": 2.0401169010080973,
+                    "mae": 1.3973336668104956,
+                    "mape": 7.33417770171126,
+                    "relative_error": 0.007157743377781216,
+                    "relative_error_abs": 0.0733417770171126
+                },
+                "h_17": {
+                    "r2": 0.9126336168184669,
+                    "mse": 4.236796593817947,
+                    "rmse": 2.058348025436405,
+                    "mae": 1.423403482793613,
+                    "mape": 7.453923613632968,
+                    "relative_error": 0.006330502512531149,
+                    "relative_error_abs": 0.07453923613632968
+                },
+                "h_18": {
+                    "r2": 0.9085255028424478,
+                    "mse": 4.353159973998731,
+                    "rmse": 2.08642276971824,
+                    "mae": 1.4465251643965316,
+                    "mape": 7.484968067667733,
+                    "relative_error": 0.002862245360724275,
+                    "relative_error_abs": 0.07484968067667733
+                },
+                "h_19": {
+                    "r2": 0.9065746211683077,
+                    "mse": 4.333263946837166,
+                    "rmse": 2.081649333302121,
+                    "mae": 1.4659211516705533,
+                    "mape": 7.571652418507946,
+                    "relative_error": 0.0021416185253501125,
+                    "relative_error_abs": 0.07571652418507946
+                },
+                "h_20": {
+                    "r2": 0.9019643713089729,
+                    "mse": 4.414387199226748,
+                    "rmse": 2.101044311580969,
+                    "mae": 1.4979662763249002,
+                    "mape": 7.706655941344992,
+                    "relative_error": -0.00029971638315270894,
+                    "relative_error_abs": 0.07706655941344992
+                },
+                "h_21": {
+                    "r2": 0.8999049991845121,
+                    "mse": 4.3924784989813,
+                    "rmse": 2.0958240620293727,
+                    "mae": 1.5071407354384203,
+                    "mape": 7.7542740465044435,
+                    "relative_error": -0.0029454294433000536,
+                    "relative_error_abs": 0.07754274046504443
+                },
+                "h_22": {
+                    "r2": 0.8974319808087636,
+                    "mse": 4.408006366434984,
+                    "rmse": 2.099525271682859,
+                    "mae": 1.5292313285636894,
+                    "mape": 7.9196678172917885,
+                    "relative_error": -0.0010130699235707148,
+                    "relative_error_abs": 0.07919667817291788
+                },
+                "h_23": {
+                    "r2": 0.8934832344152311,
+                    "mse": 4.470240304366512,
+                    "rmse": 2.114294280455422,
+                    "mae": 1.5435778204900208,
+                    "mape": 8.061880495561656,
+                    "relative_error": -0.0009617070948673103,
+                    "relative_error_abs": 0.08061880495561656
+                },
+                "h_24": {
+                    "r2": 0.8911997968351432,
+                    "mse": 4.519959733364534,
+                    "rmse": 2.126019692609768,
+                    "mae": 1.546580409346922,
+                    "mape": 8.137727427570132,
+                    "relative_error": 0.003209689293611292,
+                    "relative_error_abs": 0.08137727427570132
+                }
+            },
+            "per_month": {
+                "2025-08": {
+                    "r2": 0.9422986602061427,
+                    "mse": 1.0800875950222701,
+                    "rmse": 1.0392726278615587,
+                    "mae": 0.7315248357970775,
+                    "mape": 2.78437569848678,
+                    "relative_error": -0.004764667118889785,
+                    "relative_error_abs": 0.0278437569848678
+                },
+                "2025-09": {
+                    "r2": 0.9224623956523837,
+                    "mse": 2.233564480505045,
+                    "rmse": 1.4945114521157223,
+                    "mae": 1.1036902241353632,
+                    "mape": 4.2543899706473525,
+                    "relative_error": -0.007774727212656099,
+                    "relative_error_abs": 0.04254389970647352
+                },
+                "2025-10": {
+                    "r2": 0.8100372847032435,
+                    "mse": 6.885847477488256,
+                    "rmse": 2.6240898379225235,
+                    "mae": 1.643528019130008,
+                    "mape": 6.708918893010758,
+                    "relative_error": 0.002931921155534531,
+                    "relative_error_abs": 0.06708918893010758
+                },
+                "2025-11": {
+                    "r2": 0.8986665062991295,
+                    "mse": 3.3100798853544893,
+                    "rmse": 1.8193624942145228,
+                    "mae": 1.2539477633730864,
+                    "mape": 7.702909242377739,
+                    "relative_error": 0.01776857306647753,
+                    "relative_error_abs": 0.0770290924237774
+                },
+                "2025-12": {
+                    "r2": 0.8667826465012601,
+                    "mse": 3.3851922919610797,
+                    "rmse": 1.8398892064363765,
+                    "mae": 1.2544575356301808,
+                    "mape": 7.43756001361583,
+                    "relative_error": 0.009942074625850273,
+                    "relative_error_abs": 0.07437560013615829
+                },
+                "2026-01": {
+                    "r2": 0.893779185663288,
+                    "mse": 2.5618417148520374,
+                    "rmse": 1.6005754324154915,
+                    "mae": 1.106320521694785,
+                    "mape": 6.903100524013088,
+                    "relative_error": 0.011055040327359624,
+                    "relative_error_abs": 0.06903100524013088
+                },
+                "2026-02": {
+                    "r2": 0.9031767701313813,
+                    "mse": 2.5467076801544968,
+                    "rmse": 1.5958407439824616,
+                    "mae": 1.154103379309978,
+                    "mape": 7.047714994229355,
+                    "relative_error": 0.013973501121740157,
+                    "relative_error_abs": 0.07047714994229355
+                },
+                "2026-03": {
+                    "r2": 0.3672467060432445,
+                    "mse": 2.224773031041918,
+                    "rmse": 1.491567306909721,
+                    "mae": 1.2119145199470995,
+                    "mape": 8.29910422721627,
+                    "relative_error": 0.0014326286543468415,
+                    "relative_error_abs": 0.08299104227216271
+                }
+            },
+            "day": {
+                "r2": 0.9217574714882668,
+                "mse": 4.337178617812794,
+                "rmse": 2.08258940211766,
+                "mae": 1.404888932823638,
+                "mape": 6.475920077644773,
+                "relative_error": 0.007362095184427772,
+                "relative_error_abs": 0.06475920077644773
+            },
+            "night": {
+                "r2": 0.9218259457712078,
+                "mse": 2.186110674119059,
+                "rmse": 1.47855019330392,
+                "mae": 0.996517821425712,
+                "mape": 5.870059144816612,
+                "relative_error": 0.004862257233864807,
+                "relative_error_abs": 0.058700591448166126
+            }
+        },
+        "predictions": "./results/predictions/cartagena/patchtst/temperature\\exp_patchtst_DB_TEMP_INT_bb94b24b7b0f4f9b9a3e9731c2490371.parquet",
+        "notes": "Channel-independent PatchTST faithful to the original paper (multivariate -> multivariate, encoder and head shared across channels, no mixing of information between channels). Trained and evaluated on all input variables; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), with the same schema as the base GRU/LSTM model, to keep the analysis pipeline compatible."
+    },
+    {
+        "input_variables": [
+            "DB_TEMP_INT_INPUT_Cartagena_comp0",
+            "DB_TEMP_EXT_Cartagena_meteo",
+            "REL_HUM_EXT_Cartagena_meteo",
+            "RADIATION_MEAN_Cartagena_meteo",
+            "REL_HUM_INT_Cartagena_comp0",
+            "month_sin",
+            "month_cos",
+            "is_day",
+            "WB_TEMP_Cartagena_comp0",
+            "VPD_Cartagena_comp0",
+            "WATER_DEF_Cartagena_comp0"
+        ],
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (patch_embedding): PatchEmbedding(\n    (proj): Linear(in_features=24, out_features=64, bias=True)\n  )\n  (pos_encoding): PositionalEncoding()\n  (encoder): TransformerEncoder(\n    (layers): ModuleList(\n      (0-2): 3 x TransformerEncoderLayer(\n        (self_attn): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)\n        )\n        (linear1): Linear(in_features=64, out_features=128, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (linear2): Linear(in_features=128, out_features=64, bias=True)\n        (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout1): Dropout(p=0.1, inplace=False)\n        (dropout2): Dropout(p=0.1, inplace=False)\n      )\n    )\n  )\n  (dropout): Dropout(p=0.1, inplace=False)\n  (head): Linear(in_features=1472, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars) -> (batch, n_vars, window_size)\n        x = x.permute(0, 2, 1)\n        batch = x.size(0)\n\n        x = self.patch_embedding(x)  # (batch, n_vars, num_patches, d_model)\n\n        # channel independence: merge batch and n_vars to pass through the\n        # same encoder (weights shared across channels)\n        x = x.reshape(batch * self.n_vars, self.num_patches, -1)\n        x = self.pos_encoding(x)\n        x = self.encoder(x)\n        x = self.dropout(x)\n\n        # shared head applied channel by channel, WITHOUT merging channels\n        # back together (channel independence end to end)\n        x = x.reshape(batch * self.n_vars, -1)          # (batch*n_vars, num_patches*d_model)\n        out = self.head(x)                               # (batch*n_vars, horizon)\n        out = out.reshape(batch, self.n_vars, self.horizon)  # (batch, n_vars, horizon)\n        return out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 5e-05\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "PatchTST",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 288,
+            "horizon": 24,
+            "patch_len": 24,
+            "patch_stride": 12,
+            "d_model": 64,
+            "nhead": 4,
+            "num_encoder_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.1,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 474.27545070648193,
+        "metrics": {
+            "global": {
+                "r2": 0.9290303287669351,
+                "mse": 3.260599636720482,
+                "rmse": 1.8057130549233127,
+                "mae": 1.217500504758695,
+                "mape": 6.472173465651049,
+                "relative_error": 0.022001258533366395,
+                "relative_error_abs": 0.06472173465651049
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9913509517904877,
+                    "mse": 0.3600137140788368,
+                    "rmse": 0.6000114282901925,
+                    "mae": 0.4329861229227098,
+                    "mape": 2.224418118896168,
+                    "relative_error": 0.014131960307926801,
+                    "relative_error_abs": 0.02224418118896168
+                },
+                "h_2": {
+                    "r2": 0.984324228560089,
+                    "mse": 0.659824880029928,
+                    "rmse": 0.8122960544222334,
+                    "mae": 0.5466718513137115,
+                    "mape": 2.740349118893555,
+                    "relative_error": 0.012786867682798039,
+                    "relative_error_abs": 0.02740349118893555
+                },
+                "h_3": {
+                    "r2": 0.976461019819442,
+                    "mse": 0.9965738339605466,
+                    "rmse": 0.998285447134509,
+                    "mae": 0.664080374851685,
+                    "mape": 3.3881987104029907,
+                    "relative_error": 0.015607058771611585,
+                    "relative_error_abs": 0.033881987104029905
+                },
+                "h_4": {
+                    "r2": 0.9670074973455327,
+                    "mse": 1.4176742549657875,
+                    "rmse": 1.190661267937186,
+                    "mae": 0.791279518970457,
+                    "mape": 4.089663149642104,
+                    "relative_error": 0.01847806184687407,
+                    "relative_error_abs": 0.04089663149642104
+                },
+                "h_5": {
+                    "r2": 0.9585228782201611,
+                    "mse": 1.8269619288274856,
+                    "rmse": 1.3516515559963986,
+                    "mae": 0.8891301186104944,
+                    "mape": 4.673037838659508,
+                    "relative_error": 0.02210124958592356,
+                    "relative_error_abs": 0.04673037838659508
+                },
+                "h_6": {
+                    "r2": 0.9516459254434029,
+                    "mse": 2.1729420378453534,
+                    "rmse": 1.47409024074015,
+                    "mae": 0.9771703079733663,
+                    "mape": 5.224066188778523,
+                    "relative_error": 0.023562711991084413,
+                    "relative_error_abs": 0.05224066188778523
+                },
+                "h_7": {
+                    "r2": 0.9475263601181232,
+                    "mse": 2.394069320538514,
+                    "rmse": 1.5472780359516882,
+                    "mae": 1.049422635659232,
+                    "mape": 5.563291124707585,
+                    "relative_error": 0.027500580452137463,
+                    "relative_error_abs": 0.05563291124707585
+                },
+                "h_8": {
+                    "r2": 0.9408251692202539,
+                    "mse": 2.7510365625765285,
+                    "rmse": 1.6586249011083032,
+                    "mae": 1.1280404540982607,
+                    "mape": 5.973127530814135,
+                    "relative_error": 0.02921067902314478,
+                    "relative_error_abs": 0.059731275308141346
+                },
+                "h_9": {
+                    "r2": 0.9384365389189774,
+                    "mse": 2.9071210935526635,
+                    "rmse": 1.7050281796945947,
+                    "mae": 1.16480353994705,
+                    "mape": 6.170455472596498,
+                    "relative_error": 0.026645593812622367,
+                    "relative_error_abs": 0.061704554725964984
+                },
+                "h_10": {
+                    "r2": 0.934953105454633,
+                    "mse": 3.1262406964567977,
+                    "rmse": 1.76811784009347,
+                    "mae": 1.2225117924344564,
+                    "mape": 6.505031774766189,
+                    "relative_error": 0.02791088856984901,
+                    "relative_error_abs": 0.06505031774766189
+                },
+                "h_11": {
+                    "r2": 0.9277560243395913,
+                    "mse": 3.5196846781188538,
+                    "rmse": 1.8760822684836755,
+                    "mae": 1.2935793189952272,
+                    "mape": 7.000620846617473,
+                    "relative_error": 0.0335892597494222,
+                    "relative_error_abs": 0.07000620846617472
+                },
+                "h_12": {
+                    "r2": 0.922403446370351,
+                    "mse": 3.814556835783882,
+                    "rmse": 1.953089049629812,
+                    "mae": 1.3429931409408897,
+                    "mape": 7.314394146758686,
+                    "relative_error": 0.03436631980499711,
+                    "relative_error_abs": 0.07314394146758686
+                },
+                "h_13": {
+                    "r2": 0.9189352543483135,
+                    "mse": 4.027223407874651,
+                    "rmse": 2.006794311302145,
+                    "mae": 1.3892832261448111,
+                    "mape": 7.625174294148014,
+                    "relative_error": 0.03657825088461757,
+                    "relative_error_abs": 0.07625174294148014
+                },
+                "h_14": {
+                    "r2": 0.9172871099896491,
+                    "mse": 4.183127105126735,
+                    "rmse": 2.04526944560533,
+                    "mae": 1.3978848666736852,
+                    "mape": 7.621521208539897,
+                    "relative_error": 0.030167323866097422,
+                    "relative_error_abs": 0.07621521208539897
+                },
+                "h_15": {
+                    "r2": 0.9155087390123717,
+                    "mse": 4.272299410313218,
+                    "rmse": 2.066954138415562,
+                    "mae": 1.4186680444620543,
+                    "mape": 7.718087825664935,
+                    "relative_error": 0.03004669399636132,
+                    "relative_error_abs": 0.07718087825664935
+                },
+                "h_16": {
+                    "r2": 0.9145510436454467,
+                    "mse": 4.238729716662689,
+                    "rmse": 2.058817553029576,
+                    "mae": 1.4261775328800828,
+                    "mape": 7.687496355088022,
+                    "relative_error": 0.02467971865735217,
+                    "relative_error_abs": 0.07687496355088022
+                },
+                "h_17": {
+                    "r2": 0.9114996238293658,
+                    "mse": 4.291789114495539,
+                    "rmse": 2.071663369009439,
+                    "mae": 1.4440103758477398,
+                    "mape": 7.731093775225334,
+                    "relative_error": 0.021381402375948298,
+                    "relative_error_abs": 0.07731093775225334
+                },
+                "h_18": {
+                    "r2": 0.9070184526199454,
+                    "mse": 4.424878659657139,
+                    "rmse": 2.1035395550493314,
+                    "mae": 1.466408058607798,
+                    "mape": 7.783819611570735,
+                    "relative_error": 0.019746727253606364,
+                    "relative_error_abs": 0.07783819611570734
+                },
+                "h_19": {
+                    "r2": 0.9048971323809131,
+                    "mse": 4.4110693758816195,
+                    "rmse": 2.100254597871796,
+                    "mae": 1.4878050223088872,
+                    "mape": 7.83278909536973,
+                    "relative_error": 0.016035900966591105,
+                    "relative_error_abs": 0.0783278909536973
+                },
+                "h_20": {
+                    "r2": 0.9007091122764753,
+                    "mse": 4.470909501156743,
+                    "rmse": 2.1144525298896504,
+                    "mae": 1.5102405154304859,
+                    "mape": 7.938155786010453,
+                    "relative_error": 0.01722464953746349,
+                    "relative_error_abs": 0.07938155786010453
+                },
+                "h_21": {
+                    "r2": 0.8986368515090071,
+                    "mse": 4.44812874477586,
+                    "rmse": 2.109058734311555,
+                    "mae": 1.5199395713733923,
+                    "mape": 7.974414167090021,
+                    "relative_error": 0.014721048734180906,
+                    "relative_error_abs": 0.07974414167090021
+                },
+                "h_22": {
+                    "r2": 0.8960455759915921,
+                    "mse": 4.4675890834332925,
+                    "rmse": 2.113667212082662,
+                    "mae": 1.5409524897232274,
+                    "mape": 8.091235284975301,
+                    "relative_error": 0.011644627079763643,
+                    "relative_error_abs": 0.08091235284975301
+                },
+                "h_23": {
+                    "r2": 0.893463710740654,
+                    "mse": 4.471059663802609,
+                    "rmse": 2.1144880382264186,
+                    "mae": 1.547454276124324,
+                    "mape": 8.150566680539622,
+                    "relative_error": 0.007425866997617836,
+                    "relative_error_abs": 0.08150566680539623
+                },
+                "h_24": {
+                    "r2": 0.8892517761604466,
+                    "mse": 4.6008876613762935,
+                    "rmse": 2.144967986095898,
+                    "mae": 1.5685189579146543,
+                    "mape": 8.311155069869674,
+                    "relative_error": 0.012486762852801947,
+                    "relative_error_abs": 0.08311155069869675
+                }
+            },
+            "per_month": {
+                "2025-08": {
+                    "r2": 0.9428576952919595,
+                    "mse": 1.0696232476859677,
+                    "rmse": 1.0342259171409154,
+                    "mae": 0.7518870747451456,
+                    "mape": 2.9159884062959747,
+                    "relative_error": 0.0068445859166507,
+                    "relative_error_abs": 0.029159884062959746
+                },
+                "2025-09": {
+                    "r2": 0.9308188381951997,
+                    "mse": 1.992847045344969,
+                    "rmse": 1.4116823457651402,
+                    "mae": 1.049182860056559,
+                    "mape": 4.1411969358826735,
+                    "relative_error": 0.005927509790847418,
+                    "relative_error_abs": 0.04141196935882674
+                },
+                "2025-10": {
+                    "r2": 0.8047434214182927,
+                    "mse": 7.0777416346648385,
+                    "rmse": 2.6604025324497114,
+                    "mae": 1.6928755064624106,
+                    "mape": 7.040622994339903,
+                    "relative_error": 0.020612331668509523,
+                    "relative_error_abs": 0.07040622994339903
+                },
+                "2025-11": {
+                    "r2": 0.8949253527173937,
+                    "mse": 3.4322854539839542,
+                    "rmse": 1.852642829577238,
+                    "mae": 1.3097588279512196,
+                    "mape": 8.207789182584214,
+                    "relative_error": 0.03156119515824974,
+                    "relative_error_abs": 0.08207789182584214
+                },
+                "2025-12": {
+                    "r2": 0.8629057095039147,
+                    "mse": 3.483709316171118,
+                    "rmse": 1.86646974692094,
+                    "mae": 1.2868481699454741,
+                    "mape": 7.713774228000771,
+                    "relative_error": 0.025473140709346167,
+                    "relative_error_abs": 0.0771377422800077
+                },
+                "2026-01": {
+                    "r2": 0.8843829278283192,
+                    "mse": 2.788461379137633,
+                    "rmse": 1.6698686712246664,
+                    "mae": 1.1740028888093954,
+                    "mape": 7.443354036448071,
+                    "relative_error": 0.031773575795866454,
+                    "relative_error_abs": 0.0744335403644807
+                },
+                "2026-02": {
+                    "r2": 0.890603281988635,
+                    "mse": 2.8774237579274997,
+                    "rmse": 1.6962970724279105,
+                    "mae": 1.2447776515186924,
+                    "mape": 7.760359309052335,
+                    "relative_error": 0.03308841967910583,
+                    "relative_error_abs": 0.07760359309052335
+                },
+                "2026-03": {
+                    "r2": 0.3681370373410966,
+                    "mse": 2.2216426086813046,
+                    "rmse": 1.4905175640297919,
+                    "mae": 1.1703954372168575,
+                    "mape": 8.029404069268429,
+                    "relative_error": 0.018172353224845065,
+                    "relative_error_abs": 0.08029404069268428
+                }
+            },
+            "day": {
+                "r2": 0.9197346165049614,
+                "mse": 4.44931051778344,
+                "rmse": 2.109338881683889,
+                "mae": 1.433377643395309,
+                "mape": 6.780576240563856,
+                "relative_error": 0.01933571819242694,
+                "relative_error_abs": 0.06780576240563856
+            },
+            "night": {
+                "r2": 0.9187260700812014,
+                "mse": 2.27279763696394,
+                "rmse": 1.5075800598853581,
+                "mae": 1.0381096430747485,
+                "mape": 6.215895103399561,
+                "relative_error": 0.024216285013865378,
+                "relative_error_abs": 0.0621589510339956
+            }
+        },
+        "predictions": "./results/predictions/cartagena/patchtst/temperature\\exp_patchtst_DB_TEMP_INT_082349ffb0724cd583d83058394724f4.parquet",
+        "notes": "Channel-independent PatchTST faithful to the original paper (multivariate -> multivariate, encoder and head shared across channels, no mixing of information between channels). Trained and evaluated on all input variables; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), with the same schema as the base GRU/LSTM model, to keep the analysis pipeline compatible."
+    }
+]

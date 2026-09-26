@@ -1,0 +1,20 @@
+# Minimal dependencies to run the preprocessing and experiment scripts in
+# this repository. Versions pinned to what was used to produce the results
+# in the paper (see README.md for the environment setup instructions).
+#
+# NOTE on torch: the pinned build below (+cu130) is a CUDA 13.0 wheel from
+# PyTorch's own package index, not plain PyPI. Install it with:
+#   pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu130
+# then install the rest of this file normally. If you don't have a CUDA
+# 13.0 GPU available, install the CPU build instead (see
+# https://pytorch.org/get-started/locally/ for the right command).
+
+ephem==4.2.1
+matplotlib==3.10.8
+numpy==2.4.2
+pandas==3.0.0
+pyarrow==23.0.1
+scikit-learn==1.8.0
+torch==2.11.0
+tqdm==4.67.3
+ipykernel==7.3.0
