@@ -45,8 +45,8 @@ INVERNADERO = "cartagena"
 MODEL_NAME = "dlinear"
 SCRIPT_ID = "07_dlinear_cartagena"
 
-LAT = 42.8526
-LON = -2.62629
+LAT = 37.624934
+LON = -0.997273
 
 
 def is_it_day_from_date(date, lat, lon):

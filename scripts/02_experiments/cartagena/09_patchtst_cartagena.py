@@ -59,8 +59,8 @@ TARGET_DIR_NAMES = {
     "REL_HUM_INT": "rel_humidity",
 }
 
-LAT = 42.8526
-LON = -2.62629
+LAT = 37.624934
+LON = -0.997273
 
 
 def is_it_day_from_date(date, lat, lon):

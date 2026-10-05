@@ -42,8 +42,8 @@ PREDICTIONS_DIR = "./results/predictions/cartagena/cnn_lstm/temperature"
 EXPERIMENTS_DIR = "./results/experiments/cartagena/cnn_lstm/temperature"
 EXPERIMENT_LOG = os.path.join(EXPERIMENTS_DIR, "05_cnn_lstm_cartagena_temp.json")
 
-LAT = 42.8526
-LON = -2.62629
+LAT = 37.624934
+LON = -0.997273
 
 
 def is_it_day_from_date(date, lat, lon):

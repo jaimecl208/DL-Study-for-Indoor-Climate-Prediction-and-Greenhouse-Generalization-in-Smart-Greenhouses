@@ -40,8 +40,8 @@ PREDICTIONS_DIR = "./results/predictions/alava/gru/rel_humidity"
 EXPERIMENTS_DIR = "./results/experiments/alava/gru/rel_humidity"
 EXPERIMENT_LOG = os.path.join(EXPERIMENTS_DIR, "04_gru_alava_hum.json")
 
-LAT = 42.8526
-LON = -2.62629
+LAT = 42.853615
+LON = -2.674332
 
 
 def is_it_day_from_date(date, lat, lon):

@@ -33,8 +33,8 @@ OUTPUT_CSV = "./data/processed/Alava_processed.csv"
 DATE_COLUMN = "dateTime"
 
 # Station coordinates, used to compute day/night
-LAT = 42.8526
-LON = -2.62629
+LAT = 42.853615
+LON = -2.674332
 
 # Variables interpolated by time (no gap limit)
 VARS_INTERPOLAR_TIME = [

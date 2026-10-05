@@ -36,8 +36,8 @@ DATE_COLUMN = "dateTime"
 
 # NOTE: these coordinates match the Álava station.
 # Check whether they are also correct for Cartagena before using this script.
-LAT = 42.8526
-LON = -2.62629
+LAT = 37.624934
+LON = -0.997273
 
 # Variables interpolated by time (no gap limit)
 VARS_INTERPOLAR_TIME = [

@@ -41,8 +41,8 @@ PREDICTIONS_DIR = "./results/predictions/alava/cnn_lstm/temperature"
 EXPERIMENTS_DIR = "./results/experiments/alava/cnn_lstm/temperature"
 EXPERIMENT_LOG = os.path.join(EXPERIMENTS_DIR, "05_cnn_lstm_alava_temp.json")
 
-LAT = 42.8526
-LON = -2.62629
+LAT = 42.853615
+LON = -2.674332
 
 
 def is_it_day_from_date(date, lat, lon):

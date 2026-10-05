@@ -44,8 +44,8 @@ INVERNADERO = "alava"
 MODEL_NAME = "nlinear"
 SCRIPT_ID = "08_nlinear_alava"
 
-LAT = 42.8526
-LON = -2.62629
+LAT = 42.853615
+LON = -2.674332
 
 
 def is_it_day_from_date(date, lat, lon):

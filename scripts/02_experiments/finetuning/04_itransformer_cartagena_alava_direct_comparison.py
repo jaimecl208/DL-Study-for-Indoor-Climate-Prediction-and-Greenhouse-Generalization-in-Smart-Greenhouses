@@ -53,10 +53,10 @@ from tqdm import tqdm
 # =============================================================================
 SITE_SUFFIXES = ["_Alava", "_Cartagena_comp0", "_Cartagena_meteo"]
 
-# Same coordinates as the base script (10_itransformer_alava.py), so
+# Same coordinates as the base script (10_itransformer_cartagena.py), so
 # day/night is computed the same way and metrics stay comparable.
-LAT = 42.8526
-LON = -2.62629
+LAT = 37.624934
+LON = -0.997273
 
 
 def is_it_day_from_date(date, lat, lon):
