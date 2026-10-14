@@ -1,12 +1,12 @@
 """
 Runs every experiment script the configured number of times.
 
-By default all experiments run 3 times each (PatchTST and iTransformer
-included) - set per-model overrides in REPEATS below if you ever need a
-different count for a specific architecture.
+The number of runs per architecture is set in REPEATS below (models not
+listed fall back to DEFAULT_REPEATS). An entry in SCRIPTS can override it
+with an optional third element.
 
 Run from the repo root:
-    python run_all_experiments.py
+    python 00_run_scripts.py
 """
 
 import subprocess
@@ -31,7 +31,7 @@ REPEATS = {
     "dlinear": 5,
     "nlinear": 5,
     "patchtst": 5,
-    "itransformer": 3,
+    "itransformer": 5,
     "finetuning": 3,
 }
 

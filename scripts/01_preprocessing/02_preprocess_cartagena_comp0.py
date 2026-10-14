@@ -34,8 +34,7 @@ OUTPUT_CSV = "./data/processed/Cartagena_comp0_processed.csv"
 
 DATE_COLUMN = "dateTime"
 
-# NOTE: these coordinates match the Álava station.
-# Check whether they are also correct for Cartagena before using this script.
+# Station coordinates, used to compute day/night
 LAT = 37.624934
 LON = -0.997273
 

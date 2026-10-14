@@ -1114,5 +1114,749 @@
         },
         "predictions": "./results/predictions/cartagena/itransformer/temperature\\exp_itransformer_DB_TEMP_INT_cc2a8e832d17434dbd78fd07f6f09ea7.parquet",
         "notes": "iTransformer faithful to the original paper: inverted embedding (one token per variable), encoder with self-attention between variables, instance normalization, linear projection to horizon, point-wise output with MSE. No obs/known distinction: month_sin/month_cos/is_day enter as just more variates, as in the previous PatchTST usage. Trained and evaluated on all variates; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), reusing the same model."
+    },
+    {
+        "input_variables": {
+            "variates": [
+                "DB_TEMP_INT_INPUT_Cartagena_comp0",
+                "DB_TEMP_EXT_Cartagena_meteo",
+                "REL_HUM_EXT_Cartagena_meteo",
+                "RADIATION_MEAN_Cartagena_meteo",
+                "REL_HUM_INT_Cartagena_comp0",
+                "month_sin",
+                "month_cos",
+                "is_day",
+                "WB_TEMP_Cartagena_comp0",
+                "DB_TEMP_INT_Cartagena_comp0"
+            ]
+        },
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (embedding): InvertedEmbedding(\n    (value_embedding): Linear(in_features=96, out_features=128, bias=True)\n    (dropout): Dropout(p=0.1, inplace=False)\n  )\n  (encoder): Encoder(\n    (layers): ModuleList(\n      (0-2): 3 x EncoderLayer(\n        (attention): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)\n        )\n        (linear1): Linear(in_features=128, out_features=128, bias=True)\n        (linear2): Linear(in_features=128, out_features=128, bias=True)\n        (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (activation): GELU(approximate='none')\n      )\n    )\n    (norm): LayerNorm((128,), eps=1e-05, elementwise_affine=True, bias=True)\n  )\n  (projector): Linear(in_features=128, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars)\n        if self.use_norm:\n            means = x.mean(dim=1, keepdim=True).detach()\n            x = x - means\n            stds = torch.sqrt(torch.var(x, dim=1, keepdim=True, unbiased=False) + 1e-5).detach()\n            x = x / stds\n\n        tokens = self.embedding(x)          # (batch, n_vars, d_model)\n        enc_out, _ = self.encoder(tokens)    # (batch, n_vars, d_model)\n        dec_out = self.projector(enc_out)    # (batch, n_vars, horizon)\n        dec_out = dec_out.permute(0, 2, 1)   # (batch, horizon, n_vars)\n\n        if self.use_norm:\n            dec_out = dec_out * stds.repeat(1, dec_out.size(1), 1) + means.repeat(1, dec_out.size(1), 1)\n\n        return dec_out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 5e-05\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "iTransformer (Liu et al., 2024)",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 96,
+            "horizon": 24,
+            "d_model": 128,
+            "n_heads": 8,
+            "e_layers": 3,
+            "d_ff": 128,
+            "dropout": 0.1,
+            "use_norm": false,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 399.3399088382721,
+        "metrics": {
+            "global": {
+                "r2": 0.9336250798000263,
+                "mse": 3.0435231769072946,
+                "rmse": 1.7445696251245735,
+                "mae": 1.0886495848173385,
+                "mape": 5.454924919598244,
+                "relative_error": 0.00222524708438243,
+                "relative_error_abs": 0.05454924919598244
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9909373466326857,
+                    "mse": 0.3769442079871753,
+                    "rmse": 0.6139578226451515,
+                    "mae": 0.41425482927771673,
+                    "mape": 2.0247305949045504,
+                    "relative_error": 0.004295714987646259,
+                    "relative_error_abs": 0.020247305949045502
+                },
+                "h_2": {
+                    "r2": 0.9844577569760522,
+                    "mse": 0.653412178724207,
+                    "rmse": 0.8083391483308272,
+                    "mae": 0.512623070270386,
+                    "mape": 2.52154772328478,
+                    "relative_error": 0.003618532411311471,
+                    "relative_error_abs": 0.0252154772328478
+                },
+                "h_3": {
+                    "r2": 0.9768145613769461,
+                    "mse": 0.9809056472899983,
+                    "rmse": 0.9904068089881037,
+                    "mae": 0.6096730250924896,
+                    "mape": 3.0196679885395805,
+                    "relative_error": 0.001698882420902918,
+                    "relative_error_abs": 0.030196679885395806
+                },
+                "h_4": {
+                    "r2": 0.9693783906914388,
+                    "mse": 1.3151340369895064,
+                    "rmse": 1.1467929355334843,
+                    "mae": 0.6994556037783776,
+                    "mape": 3.5124598684883566,
+                    "relative_error": 0.0029552746628222163,
+                    "relative_error_abs": 0.035124598684883566
+                },
+                "h_5": {
+                    "r2": 0.9610140020051899,
+                    "mse": 1.7154551756964913,
+                    "rmse": 1.3097538607297523,
+                    "mae": 0.7878331773579811,
+                    "mape": 3.983436370995025,
+                    "relative_error": 0.003882858719756151,
+                    "relative_error_abs": 0.03983436370995025
+                },
+                "h_6": {
+                    "r2": 0.9539902376156791,
+                    "mse": 2.0642181134914144,
+                    "rmse": 1.4367387074521987,
+                    "mae": 0.8499766218709519,
+                    "mape": 4.361514120005647,
+                    "relative_error": 0.0063216421400224985,
+                    "relative_error_abs": 0.04361514120005647
+                },
+                "h_7": {
+                    "r2": 0.9513419151578498,
+                    "mse": 2.2152283778114845,
+                    "rmse": 1.4883643296624267,
+                    "mae": 0.9065904444075491,
+                    "mape": 4.502148573342122,
+                    "relative_error": 0.003782406197662512,
+                    "relative_error_abs": 0.045021485733421227
+                },
+                "h_8": {
+                    "r2": 0.9465123893306225,
+                    "mse": 2.4816334145306986,
+                    "rmse": 1.5753200990689793,
+                    "mae": 0.9616515258086352,
+                    "mape": 4.757509983160737,
+                    "relative_error": 0.0033164754039433984,
+                    "relative_error_abs": 0.04757509983160736
+                },
+                "h_9": {
+                    "r2": 0.9430254515464237,
+                    "mse": 2.683864960060666,
+                    "rmse": 1.6382505791424784,
+                    "mae": 1.0172391505414888,
+                    "mape": 5.013543209335454,
+                    "relative_error": 0.0023525048889767547,
+                    "relative_error_abs": 0.05013543209335454
+                },
+                "h_10": {
+                    "r2": 0.9401499334186081,
+                    "mse": 2.8686590786190087,
+                    "rmse": 1.6937116279399538,
+                    "mae": 1.0584053654795809,
+                    "mape": 5.243354719284188,
+                    "relative_error": 0.004120471901537,
+                    "relative_error_abs": 0.05243354719284188
+                },
+                "h_11": {
+                    "r2": 0.9362497154829517,
+                    "mse": 3.096416453484698,
+                    "rmse": 1.7596637330708098,
+                    "mae": 1.092270708577504,
+                    "mape": 5.468526391126241,
+                    "relative_error": 0.005590049027579767,
+                    "relative_error_abs": 0.05468526391126242
+                },
+                "h_12": {
+                    "r2": 0.9303335679412501,
+                    "mse": 3.4145587519266263,
+                    "rmse": 1.8478524702818204,
+                    "mae": 1.1500400763122998,
+                    "mape": 5.7923152987773925,
+                    "relative_error": 0.007213507752054998,
+                    "relative_error_abs": 0.057923152987773924
+                },
+                "h_13": {
+                    "r2": 0.9276898719931681,
+                    "mse": 3.583917139803092,
+                    "rmse": 1.8931236462003986,
+                    "mae": 1.179065744801998,
+                    "mape": 5.937033079363162,
+                    "relative_error": 0.0053267742055776385,
+                    "relative_error_abs": 0.05937033079363162
+                },
+                "h_14": {
+                    "r2": 0.9227271746762141,
+                    "mse": 3.899059869471867,
+                    "rmse": 1.9746037246677792,
+                    "mae": 1.2338993975368504,
+                    "mape": 6.14307522424555,
+                    "relative_error": 0.0019723619424692578,
+                    "relative_error_abs": 0.0614307522424555
+                },
+                "h_15": {
+                    "r2": 0.9214916935304652,
+                    "mse": 3.959620167472678,
+                    "rmse": 1.9898794354112708,
+                    "mae": 1.2517975689268566,
+                    "mape": 6.255087520875668,
+                    "relative_error": 0.0019623431873607897,
+                    "relative_error_abs": 0.06255087520875668
+                },
+                "h_16": {
+                    "r2": 0.919760845074226,
+                    "mse": 3.9708847275032513,
+                    "rmse": 1.992707888152012,
+                    "mae": 1.28495098920073,
+                    "mape": 6.421317634479882,
+                    "relative_error": 0.0008288836324042003,
+                    "relative_error_abs": 0.06421317634479883
+                },
+                "h_17": {
+                    "r2": 0.9176976970220935,
+                    "mse": 3.9825310998313563,
+                    "rmse": 1.9956279963538686,
+                    "mae": 1.2998534708048302,
+                    "mape": 6.533936308058454,
+                    "relative_error": 0.001051876855133648,
+                    "relative_error_abs": 0.06533936308058454
+                },
+                "h_18": {
+                    "r2": 0.9111199056382964,
+                    "mse": 4.219282488782835,
+                    "rmse": 2.0540892114956533,
+                    "mae": 1.3329613624498349,
+                    "mape": 6.643902187665312,
+                    "relative_error": -0.0017405337056898952,
+                    "relative_error_abs": 0.06643902187665313
+                },
+                "h_19": {
+                    "r2": 0.9101931563498858,
+                    "mse": 4.155543781325285,
+                    "rmse": 2.0385150922485917,
+                    "mae": 1.3546102127074522,
+                    "mape": 6.775633939265729,
+                    "relative_error": -0.0020544180079755895,
+                    "relative_error_abs": 0.0677563393926573
+                },
+                "h_20": {
+                    "r2": 0.9053485357728454,
+                    "mse": 4.251511727674209,
+                    "rmse": 2.0619194280267616,
+                    "mae": 1.3795757522331096,
+                    "mape": 6.885638516693401,
+                    "relative_error": -0.0012538664002123407,
+                    "relative_error_abs": 0.06885638516693401
+                },
+                "h_21": {
+                    "r2": 0.9037204399741968,
+                    "mse": 4.217008546003088,
+                    "rmse": 2.0535356208264535,
+                    "mae": 1.4038290555280144,
+                    "mape": 7.033418498245214,
+                    "relative_error": -0.00016351097572994515,
+                    "relative_error_abs": 0.07033418498245214
+                },
+                "h_22": {
+                    "r2": 0.9004163658960203,
+                    "mse": 4.272657295043772,
+                    "rmse": 2.067040709575835,
+                    "mae": 1.437797733917678,
+                    "mape": 7.24916443112863,
+                    "relative_error": -0.0022028180798019143,
+                    "relative_error_abs": 0.0724916443112863
+                },
+                "h_23": {
+                    "r2": 0.897707574088543,
+                    "mse": 4.287001837909152,
+                    "rmse": 2.070507628073162,
+                    "mae": 1.4490571053317864,
+                    "mape": 7.357513963048641,
+                    "relative_error": -0.0006546592926071008,
+                    "relative_error_abs": 0.07357513963048641
+                },
+                "h_24": {
+                    "r2": 0.8944928642606886,
+                    "mse": 4.37910716834251,
+                    "rmse": 2.09263163704043,
+                    "mae": 1.4601780434020222,
+                    "mape": 7.481721926044132,
+                    "relative_error": 0.001185176150033618,
+                    "relative_error_abs": 0.07481721926044133
+                }
+            },
+            "per_month": {
+                "2025-07": {
+                    "r2": 0.9765663026941979,
+                    "mse": 0.23634270619854542,
+                    "rmse": 0.48615090887351575,
+                    "mae": 0.4549099398330905,
+                    "mape": 1.8121210883133243,
+                    "relative_error": 0.01612449673051587,
+                    "relative_error_abs": 0.018121210883133242
+                },
+                "2025-08": {
+                    "r2": 0.9472733184475421,
+                    "mse": 0.9835605890830208,
+                    "rmse": 0.9917462322000627,
+                    "mae": 0.6875946119982469,
+                    "mape": 2.6194933305492936,
+                    "relative_error": 0.006405275321111571,
+                    "relative_error_abs": 0.026194933305492937
+                },
+                "2025-09": {
+                    "r2": 0.9319116458303446,
+                    "mse": 1.9613673995857128,
+                    "rmse": 1.4004882718486837,
+                    "mae": 0.9997783290015323,
+                    "mape": 3.8392449246785585,
+                    "relative_error": 0.0019152567581339334,
+                    "relative_error_abs": 0.03839244924678559
+                },
+                "2025-10": {
+                    "r2": 0.7946624011179405,
+                    "mse": 7.443162649505815,
+                    "rmse": 2.72821601958236,
+                    "mae": 1.5174067585686868,
+                    "mape": 5.868791216676995,
+                    "relative_error": -2.1601741307143632e-05,
+                    "relative_error_abs": 0.058687912166769954
+                },
+                "2025-11": {
+                    "r2": 0.9216326012350238,
+                    "mse": 2.559887563782608,
+                    "rmse": 1.5999648632962562,
+                    "mae": 1.0941058905882601,
+                    "mape": 6.358727978745862,
+                    "relative_error": -0.003048695315195164,
+                    "relative_error_abs": 0.06358727978745862
+                },
+                "2025-12": {
+                    "r2": 0.8754915661780335,
+                    "mse": 3.1638895338230397,
+                    "rmse": 1.7787325638844755,
+                    "mae": 1.191192320202841,
+                    "mape": 6.955527548594523,
+                    "relative_error": 0.007697731075571204,
+                    "relative_error_abs": 0.06955527548594523
+                },
+                "2026-01": {
+                    "r2": 0.8829111642392686,
+                    "mse": 2.8239574858129033,
+                    "rmse": 1.680463473513454,
+                    "mae": 1.0914831649445291,
+                    "mape": 6.539487510418167,
+                    "relative_error": 0.004384735518044189,
+                    "relative_error_abs": 0.06539487510418167
+                },
+                "2026-02": {
+                    "r2": 0.9089488900405516,
+                    "mse": 2.394885621301439,
+                    "rmse": 1.5475417995328717,
+                    "mae": 1.0562283050992114,
+                    "mape": 6.065984154309906,
+                    "relative_error": -0.005140675253863064,
+                    "relative_error_abs": 0.06065984154309906
+                },
+                "2026-03": {
+                    "r2": 0.5354797167382612,
+                    "mse": 1.6332624554354331,
+                    "rmse": 1.2779915709563319,
+                    "mae": 0.9646347307070656,
+                    "mape": 6.686324969120112,
+                    "relative_error": 0.023031594877558657,
+                    "relative_error_abs": 0.06686324969120112
+                }
+            },
+            "day": {
+                "r2": 0.9156328451526137,
+                "mse": 4.692445225105792,
+                "rmse": 2.1662052592277106,
+                "mae": 1.3621420349004936,
+                "mape": 6.001918350373664,
+                "relative_error": -0.007068124198897814,
+                "relative_error_abs": 0.06001918350373664
+            },
+            "night": {
+                "r2": 0.9429864572109449,
+                "mse": 1.6155395491674418,
+                "rmse": 1.27103876776731,
+                "mae": 0.8518022811768265,
+                "mape": 4.981222924721089,
+                "relative_error": 0.010273403183411288,
+                "relative_error_abs": 0.04981222924721089
+            }
+        },
+        "predictions": "./results/predictions/cartagena/itransformer/temperature\\exp_itransformer_DB_TEMP_INT_5d9e155e886e48c9ab8842c50ddc2fb5.parquet",
+        "notes": "iTransformer faithful to the original paper: inverted embedding (one token per variable), encoder with self-attention between variables, instance normalization, linear projection to horizon, point-wise output with MSE. No obs/known distinction: month_sin/month_cos/is_day enter as just more variates, as in the previous PatchTST usage. Trained and evaluated on all variates; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), reusing the same model."
+    },
+    {
+        "input_variables": {
+            "variates": [
+                "DB_TEMP_INT_INPUT_Cartagena_comp0",
+                "DB_TEMP_EXT_Cartagena_meteo",
+                "REL_HUM_EXT_Cartagena_meteo",
+                "RADIATION_MEAN_Cartagena_meteo",
+                "REL_HUM_INT_Cartagena_comp0",
+                "month_sin",
+                "month_cos",
+                "is_day",
+                "WB_TEMP_Cartagena_comp0",
+                "DB_TEMP_INT_Cartagena_comp0"
+            ]
+        },
+        "target_variable": "DB_TEMP_INT",
+        "model_architecture": "Modelo(\n  (embedding): InvertedEmbedding(\n    (value_embedding): Linear(in_features=96, out_features=128, bias=True)\n    (dropout): Dropout(p=0.1, inplace=False)\n  )\n  (encoder): Encoder(\n    (layers): ModuleList(\n      (0-2): 3 x EncoderLayer(\n        (attention): MultiheadAttention(\n          (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)\n        )\n        (linear1): Linear(in_features=128, out_features=128, bias=True)\n        (linear2): Linear(in_features=128, out_features=128, bias=True)\n        (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True, bias=True)\n        (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True, bias=True)\n        (dropout): Dropout(p=0.1, inplace=False)\n        (activation): GELU(approximate='none')\n      )\n    )\n    (norm): LayerNorm((128,), eps=1e-05, elementwise_affine=True, bias=True)\n  )\n  (projector): Linear(in_features=128, out_features=24, bias=True)\n)",
+        "forward_code": "    def forward(self, x):\n        # x: (batch, window_size, n_vars)\n        if self.use_norm:\n            means = x.mean(dim=1, keepdim=True).detach()\n            x = x - means\n            stds = torch.sqrt(torch.var(x, dim=1, keepdim=True, unbiased=False) + 1e-5).detach()\n            x = x / stds\n\n        tokens = self.embedding(x)          # (batch, n_vars, d_model)\n        enc_out, _ = self.encoder(tokens)    # (batch, n_vars, d_model)\n        dec_out = self.projector(enc_out)    # (batch, n_vars, horizon)\n        dec_out = dec_out.permute(0, 2, 1)   # (batch, horizon, n_vars)\n\n        if self.use_norm:\n            dec_out = dec_out * stds.repeat(1, dec_out.size(1), 1) + means.repeat(1, dec_out.size(1), 1)\n\n        return dec_out\n",
+        "optimizer": "AdamW (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    decoupled_weight_decay: True\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 1.25e-05\n    maximize: False\n    weight_decay: 0.01\n)",
+        "network_params": {
+            "architecture": "iTransformer (Liu et al., 2024)",
+            "batch_size": 128,
+            "lr": 0.0001,
+            "num_epochs": 100,
+            "patience": 10,
+            "window_size": 96,
+            "horizon": 24,
+            "d_model": 128,
+            "n_heads": 8,
+            "e_layers": 3,
+            "d_ff": 128,
+            "dropout": 0.1,
+            "use_norm": false,
+            "train_block_days": 14,
+            "val_block_days": 7,
+            "stride_train": 1,
+            "stride_val": 1
+        },
+        "training_time": 459.6903660297394,
+        "metrics": {
+            "global": {
+                "r2": 0.9345110475419416,
+                "mse": 3.0028984447285216,
+                "rmse": 1.7328873144923538,
+                "mae": 1.0720289429714138,
+                "mape": 5.350646852302858,
+                "relative_error": -0.0031031199193028744,
+                "relative_error_abs": 0.05350646852302858
+            },
+            "per_horizon": {
+                "h_1": {
+                    "r2": 0.9923896536771369,
+                    "mse": 0.3165381981314658,
+                    "rmse": 0.5626172750027018,
+                    "mae": 0.36181652635894174,
+                    "mape": 1.7674107336765745,
+                    "relative_error": -0.005911914915324205,
+                    "relative_error_abs": 0.017674107336765745
+                },
+                "h_2": {
+                    "r2": 0.985019652160511,
+                    "mse": 0.6297895165302003,
+                    "rmse": 0.793592790119845,
+                    "mae": 0.48845615231349176,
+                    "mape": 2.3829320246601102,
+                    "relative_error": -0.005274120463374498,
+                    "relative_error_abs": 0.0238293202466011
+                },
+                "h_3": {
+                    "r2": 0.9781033719598996,
+                    "mse": 0.9263799771200524,
+                    "rmse": 0.9624863516539091,
+                    "mae": 0.5865998711289943,
+                    "mape": 2.9012082150607528,
+                    "relative_error": -0.005181154966959943,
+                    "relative_error_abs": 0.029012082150607528
+                },
+                "h_4": {
+                    "r2": 0.9703996524815152,
+                    "mse": 1.2712729803326739,
+                    "rmse": 1.1275074191918535,
+                    "mae": 0.6852596741202861,
+                    "mape": 3.415392409055401,
+                    "relative_error": -0.003455178138200547,
+                    "relative_error_abs": 0.03415392409055401
+                },
+                "h_5": {
+                    "r2": 0.9617644203134699,
+                    "mse": 1.6824353984152358,
+                    "rmse": 1.2970872747873352,
+                    "mae": 0.7738324921665432,
+                    "mape": 3.9038622733656894,
+                    "relative_error": -0.003235202176301724,
+                    "relative_error_abs": 0.039038622733656894
+                },
+                "h_6": {
+                    "r2": 0.9539464803393981,
+                    "mse": 2.06618127429937,
+                    "rmse": 1.4374217454523812,
+                    "mae": 0.8428745313104145,
+                    "mape": 4.306507527585048,
+                    "relative_error": -0.0017032600097438466,
+                    "relative_error_abs": 0.04306507527585048
+                },
+                "h_7": {
+                    "r2": 0.9527631240858069,
+                    "mse": 2.1505258240997436,
+                    "rmse": 1.4664671234295517,
+                    "mae": 0.8793533845295718,
+                    "mape": 4.362903086493762,
+                    "relative_error": -0.0013768267542086014,
+                    "relative_error_abs": 0.04362903086493762
+                },
+                "h_8": {
+                    "r2": 0.945756889497111,
+                    "mse": 2.516685898798573,
+                    "rmse": 1.5864065994563226,
+                    "mae": 0.9499521880934476,
+                    "mape": 4.668927285727314,
+                    "relative_error": -0.0027382534507956985,
+                    "relative_error_abs": 0.04668927285727314
+                },
+                "h_9": {
+                    "r2": 0.9438577735135064,
+                    "mse": 2.6446572818328646,
+                    "rmse": 1.626240228820104,
+                    "mae": 0.9869142763433179,
+                    "mape": 4.82290418435373,
+                    "relative_error": -0.0044662735051583255,
+                    "relative_error_abs": 0.0482290418435373
+                },
+                "h_10": {
+                    "r2": 0.9422068755207758,
+                    "mse": 2.770068283777498,
+                    "rmse": 1.6643522114557057,
+                    "mae": 1.019559023198253,
+                    "mape": 5.032723748972238,
+                    "relative_error": -0.0022135417586299283,
+                    "relative_error_abs": 0.05032723748972238
+                },
+                "h_11": {
+                    "r2": 0.9370630599694657,
+                    "mse": 3.0569114807701117,
+                    "rmse": 1.7484025511220553,
+                    "mae": 1.0689426576309298,
+                    "mape": 5.313722308243314,
+                    "relative_error": -0.001139911782658777,
+                    "relative_error_abs": 0.053137223082433134
+                },
+                "h_12": {
+                    "r2": 0.9313250376805093,
+                    "mse": 3.3659638752347525,
+                    "rmse": 1.8346563370927953,
+                    "mae": 1.133446360215254,
+                    "mape": 5.678072635140992,
+                    "relative_error": 0.0008942303273962861,
+                    "relative_error_abs": 0.05678072635140991
+                },
+                "h_13": {
+                    "r2": 0.9277327430334634,
+                    "mse": 3.581792316346811,
+                    "rmse": 1.8925623678882584,
+                    "mae": 1.171059268005053,
+                    "mape": 5.833858129116598,
+                    "relative_error": -0.0019307617388654445,
+                    "relative_error_abs": 0.05833858129116598
+                },
+                "h_14": {
+                    "r2": 0.9230496177035238,
+                    "mse": 3.8827899238253076,
+                    "rmse": 1.9704796177137454,
+                    "mae": 1.2279775987950188,
+                    "mape": 6.084232689512882,
+                    "relative_error": -0.0024266250995390874,
+                    "relative_error_abs": 0.06084232689512883
+                },
+                "h_15": {
+                    "r2": 0.9222396934323639,
+                    "mse": 3.9218942804931265,
+                    "rmse": 1.980377307609115,
+                    "mae": 1.241602819441291,
+                    "mape": 6.172558027814044,
+                    "relative_error": -0.0022530332118710465,
+                    "relative_error_abs": 0.06172558027814044
+                },
+                "h_16": {
+                    "r2": 0.9209865558177633,
+                    "mse": 3.9102266101994014,
+                    "rmse": 1.9774292933501822,
+                    "mae": 1.2831401459000855,
+                    "mape": 6.405310057850717,
+                    "relative_error": -0.0010767576322859027,
+                    "relative_error_abs": 0.06405310057850717
+                },
+                "h_17": {
+                    "r2": 0.916986248548007,
+                    "mse": 4.0169574229287495,
+                    "rmse": 2.004234872196557,
+                    "mae": 1.3037787702708465,
+                    "mape": 6.510999495995533,
+                    "relative_error": -0.0010790719951950507,
+                    "relative_error_abs": 0.06510999495995533
+                },
+                "h_18": {
+                    "r2": 0.9120766435235828,
+                    "mse": 4.173864586892271,
+                    "rmse": 2.0430038147033085,
+                    "mae": 1.3304479643356377,
+                    "mape": 6.602953348063964,
+                    "relative_error": -0.0047292528039302,
+                    "relative_error_abs": 0.06602953348063964
+                },
+                "h_19": {
+                    "r2": 0.9090807404550776,
+                    "mse": 4.207017508337984,
+                    "rmse": 2.051101535355572,
+                    "mae": 1.3591650554174814,
+                    "mape": 6.732496565430561,
+                    "relative_error": -0.006225543736782817,
+                    "relative_error_abs": 0.06732496565430561
+                },
+                "h_20": {
+                    "r2": 0.9064162002460153,
+                    "mse": 4.203554857001724,
+                    "rmse": 2.0502572660526592,
+                    "mae": 1.379513843676653,
+                    "mape": 6.874786238232315,
+                    "relative_error": -0.0038739625645106525,
+                    "relative_error_abs": 0.06874786238232315
+                },
+                "h_21": {
+                    "r2": 0.9051998946001057,
+                    "mse": 4.152208989386813,
+                    "rmse": 2.037696981738652,
+                    "mae": 1.3940797973106236,
+                    "mape": 6.984572340315216,
+                    "relative_error": -0.0038887910454620655,
+                    "relative_error_abs": 0.06984572340315216
+                },
+                "h_22": {
+                    "r2": 0.9029805784852868,
+                    "mse": 4.162639200964848,
+                    "rmse": 2.040254690220034,
+                    "mae": 1.4138554413831523,
+                    "mape": 7.121004163501941,
+                    "relative_error": -0.004949282470470475,
+                    "relative_error_abs": 0.07121004163501941
+                },
+                "h_23": {
+                    "r2": 0.8999128677732077,
+                    "mse": 4.194579569153199,
+                    "rmse": 2.0480672765202805,
+                    "mae": 1.4172189591597633,
+                    "mape": 7.194791296488484,
+                    "relative_error": -0.004733133081769106,
+                    "relative_error_abs": 0.07194791296488484
+                },
+                "h_24": {
+                    "r2": 0.8972510590318884,
+                    "mse": 4.264627418611752,
+                    "rmse": 2.065097435621804,
+                    "mae": 1.4298478302088842,
+                    "mape": 7.341395670611399,
+                    "relative_error": -0.0015072550886273237,
+                    "relative_error_abs": 0.07341395670611399
+                }
+            },
+            "per_month": {
+                "2025-07": {
+                    "r2": 0.9889672274278366,
+                    "mse": 0.11127204096523756,
+                    "rmse": 0.33357464077060406,
+                    "mae": 0.2623175876241334,
+                    "mape": 1.095570768691358,
+                    "relative_error": 0.0012971089121448219,
+                    "relative_error_abs": 0.01095570768691358
+                },
+                "2025-08": {
+                    "r2": 0.9494392368775671,
+                    "mse": 0.9431576669908768,
+                    "rmse": 0.971163048612784,
+                    "mae": 0.611758379122512,
+                    "mape": 2.276933559543122,
+                    "relative_error": -0.0041499723364707905,
+                    "relative_error_abs": 0.02276933559543122
+                },
+                "2025-09": {
+                    "r2": 0.9273343258352309,
+                    "mse": 2.0932226386405146,
+                    "rmse": 1.446797373041752,
+                    "mae": 1.026265426918312,
+                    "mape": 3.8817991457358896,
+                    "relative_error": -0.008078818416799756,
+                    "relative_error_abs": 0.0388179914573589
+                },
+                "2025-10": {
+                    "r2": 0.8020017458936015,
+                    "mse": 7.177123028883668,
+                    "rmse": 2.6790153095650027,
+                    "mae": 1.4960937779096608,
+                    "mape": 5.755816987521848,
+                    "relative_error": -0.007091809818019062,
+                    "relative_error_abs": 0.05755816987521847
+                },
+                "2025-11": {
+                    "r2": 0.9191280388111387,
+                    "mse": 2.6416996221469367,
+                    "rmse": 1.6253306193347052,
+                    "mae": 1.0957274753039268,
+                    "mape": 6.3159980334040595,
+                    "relative_error": -0.0050220676227536246,
+                    "relative_error_abs": 0.06315998033404059
+                },
+                "2025-12": {
+                    "r2": 0.877508353318089,
+                    "mse": 3.1126408631225946,
+                    "rmse": 1.764267798017805,
+                    "mae": 1.167636630547944,
+                    "mape": 6.7974451587605405,
+                    "relative_error": 0.0025117252597903115,
+                    "relative_error_abs": 0.0679744515876054
+                },
+                "2026-01": {
+                    "r2": 0.8811318456778177,
+                    "mse": 2.866871226808015,
+                    "rmse": 1.6931837545901554,
+                    "mae": 1.0955074793442177,
+                    "mape": 6.491149993819068,
+                    "relative_error": 0.0024054452832966114,
+                    "relative_error_abs": 0.06491149993819068
+                },
+                "2026-02": {
+                    "r2": 0.915834821253634,
+                    "mse": 2.2137673717949062,
+                    "rmse": 1.4878734394413076,
+                    "mae": 1.0335879367058676,
+                    "mape": 6.0253747031454505,
+                    "relative_error": -0.004436554857432571,
+                    "relative_error_abs": 0.06025374703145451
+                },
+                "2026-03": {
+                    "r2": 0.5936632097701293,
+                    "mse": 1.428688149168823,
+                    "rmse": 1.1952774360661307,
+                    "mae": 0.9489295975301275,
+                    "mape": 6.636269289006861,
+                    "relative_error": 0.016626851256721267,
+                    "relative_error_abs": 0.0663626928900686
+                }
+            },
+            "day": {
+                "r2": 0.915611382890935,
+                "mse": 4.693638941872897,
+                "rmse": 2.1664807734833227,
+                "mae": 1.3677098828379546,
+                "mape": 5.9946980263753185,
+                "relative_error": -0.008967157961075296,
+                "relative_error_abs": 0.05994698026375318
+            },
+            "night": {
+                "r2": 0.9456981936144624,
+                "mse": 1.5386996056647442,
+                "rmse": 1.2404433101374461,
+                "mae": 0.8159661766172073,
+                "mape": 4.792891843200457,
+                "relative_error": 0.001975197958272531,
+                "relative_error_abs": 0.04792891843200457
+            }
+        },
+        "predictions": "./results/predictions/cartagena/itransformer/temperature\\exp_itransformer_DB_TEMP_INT_22021cb26ff5417b96208cb55bb76566.parquet",
+        "notes": "iTransformer faithful to the original paper: inverted embedding (one token per variable), encoder with self-attention between variables, instance normalization, linear projection to horizon, point-wise output with MSE. No obs/known distinction: month_sin/month_cos/is_day enter as just more variates, as in the previous PatchTST usage. Trained and evaluated on all variates; an independent JSON is saved per target (DB_TEMP_INT and REL_HUM_INT), reusing the same model."
     }
 ]
