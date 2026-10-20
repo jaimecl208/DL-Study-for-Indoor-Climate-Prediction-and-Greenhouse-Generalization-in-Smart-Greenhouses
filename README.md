@@ -229,12 +229,3 @@ The fine-tuning scripts are organized in pairs for each direction:
 ### 4. Tables and figures
 
 The notebooks in `metrics/` read the JSON, CSV and Parquet results and compute the tables reported in the paper (architecture comparison per site and target, and fine-tuning experiments per direction). They must be run from the `metrics/` directory. The SHAP summary plots in `figures/<site>/shap/` are produced by the preprocessing script `04_shap_feature_importance.py` (see step 2), not by the notebooks.
-
-## Acknowledgements
-
-This work was developed within the SERGIoT project (CPP2023-010458), funded by MICIU/AEI/10.13039/501100011033 and FEDER (EU), and by the Universitat Politècnica de València through the Predoctoral Research Program (Subprogram 1, Grant PAID-01-24). Data were provided by NUTRICONTROL.
-
-## Contact
-
-Jaime Carlavilla-Lázaro — jcarlaz@etsinf.upv.es
-Department of Computer Engineering (DISCA), Universitat Politècnica de València, Spain.
